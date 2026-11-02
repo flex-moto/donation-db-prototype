@@ -95,6 +95,10 @@ tr.sel td{background:var(--accent-soft)}
 .dlg-back.hidden{display:none}
 .dlg{background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:4px;padding:16px;width:min(460px,100%);max-height:90vh;overflow-y:auto}
 #dlg-body{white-space:pre-wrap;margin:8px 0 14px}
+.drop{border:2px dashed var(--border);border-radius:4px;padding:16px;text-align:center;background:var(--surface2);margin:8px 0}
+.drop.over{border-color:var(--accent);background:var(--accent-soft)}
+.drop input[type=file]{max-width:100%;font:inherit;color:var(--text)}
+.cols{font-size:12px;color:var(--muted);word-break:break-all}
 [hidden]{display:none!important}
 </style>
 </head>
@@ -149,7 +153,7 @@ tr.sel td{background:var(--accent-soft)}
   <div class="note">財団が承認したものだけが団体マスタ（core）に反映されます。</div>
   <div class="grid" style="max-width:300px;margin-bottom:8px"><div><label for="apv-user">承認者</label><select id="apv-user"><option>職員A</option><option>職員B</option><option>職員C</option></select></div></div>
   <h3>承認待ちの申請</h3>
-  <div class="tbl"><table class="list-click"><thead><tr><th>申請日時</th><th>団体名</th><th class="num">変更項目数</th></tr></thead><tbody id="apv-list"></tbody></table></div>
+  <div class="tbl"><table class="list-click"><thead><tr><th>申請日時</th><th>団体名</th><th>申請者</th><th class="num">変更項目数</th></tr></thead><tbody id="apv-list"></tbody></table></div>
   <div id="apv-detail"></div>
   <h3>変更履歴（core反映）</h3>
   <div class="tbl"><table><thead><tr><th>日時</th><th>団体名</th><th>結果</th><th>担当</th><th>変更項目・理由</th></tr></thead><tbody id="apv-hist"></tbody></table></div>
@@ -197,6 +201,19 @@ tr.sel td{background:var(--accent-soft)}
   <textarea id="go-csv" rows="6" readonly aria-label="寄付サイト用CSV"></textarea>
   <div class="row" style="margin-top:8px"><button class="btn sub" id="go-copy" type="button">CSVをコピー</button><button class="btn" id="go-done" type="button">反映済みにする</button><span id="go-msg"></span></div>
 </section>
+
+<!-- 6 一括登録 -->
+<section class="panel hidden" id="v-bulk" data-tab>
+  <span class="where in">概念図：取り込み（Extract／Load）</span><span class="where out">要件T08（データ移行）・画面としては概念図に記載なし</span>
+  <h2>6. 一括登録（Excel／CSV）</h2>
+  <div class="note">選んだファイルはこのブラウザの中だけで処理し、外部には送信しません。1枚目のシートの1行目を列名（見出し）として読みます。取り込んだ行は「承認待ち」に入り、承認されるまで団体マスタには反映されません。</div>
+  <div id="bk-drop" class="drop"><label for="bk-file" style="color:var(--text);font-size:14px">ファイルを選択（.xlsx／.xls／.csv）、またはこの枠にドラッグ＆ドロップ</label><input type="file" id="bk-file" accept=".xlsx,.xls,.csv"></div>
+  <div class="row"><button class="btn sub" type="button" id="bk-sample">見本データで試す</button><button class="btn sub" type="button" id="bk-head">列名（見出し行）をコピー</button><span id="bk-headmsg"></span></div>
+  <textarea id="bk-headtxt" class="hidden" rows="2" readonly aria-label="見出し行の列名"></textarea>
+  <p class="cols">列名：団体名、法人格、所在地（都道府県）、活動テーマ、対象者、社会課題キーワード、年間予算（万円）、自己資金比率（%）、連絡先メール、寄付プロジェクト名、寄付プロジェクト概要。前後の空白・全角半角・括弧部分の有無は区別しません。活動テーマは「、」「,」「／」で区切ります。見本データには問題のある行をわざと混ぜています。</p>
+  <div id="bk-msg"></div>
+  <div id="bk-result"></div>
+</section>
 </main>
 
 <aside class="panel" style="background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:12px">
@@ -209,6 +226,7 @@ tr.sel td{background:var(--accent-soft)}
 
 <div id="dlg" class="dlg-back hidden"><div class="dlg" role="dialog" aria-modal="true" aria-labelledby="dlg-title" aria-describedby="dlg-body"><h2 id="dlg-title"></h2><p id="dlg-body"></p><div class="row" style="justify-content:flex-end"><button class="btn sub" type="button" id="dlg-cancel">キャンセル</button><button class="btn" type="button" id="dlg-ok">実行</button></div></div></div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
 (function(){
 "use strict";
@@ -267,7 +285,7 @@ function initState(){
       email:"info"+(i+1)+"@example.org",pjName:r[0].replace(/（.*?）/,"")+" "+PJ[i%PJ.length]+"プロジェクト",pjSummary:r[4]+"を対象に、"+r[5].split("、")[0]+"の課題に取り組むための資金を募ります。（架空の説明文）",
       memo:"内部メモ（非公開）",cert:r[8],updatedAt:daysAgo(r[9]),status:r[10],requestAt:r[11]==null?null:daysAgo(r[11],9)};
   });
-  S={orgs:orgs,apps:[],history:[],log:[],lastSync:daysAgo(45,15),selApp:null,tab:"apply"};
+  S={bulk:null,orgs:orgs,apps:[],history:[],log:[],lastSync:daysAgo(45,15),selApp:null,tab:"apply"};
   // 初期の承認待ち2件
   addApp("G03",{budget:1350,keywords:"教育格差、不登校、オンライン学習",pjSummary:"中高生を対象に、無料の学習会とオンライン学習相談を行うための資金を募ります。（架空の説明文）"},daysAgo(2,14));
   addApp("G08",{email:"contact@kibou-sample.example.org",themes:["災害支援","地域づくり","福祉・障害"],selfRatio:24},daysAgo(1,11));
@@ -286,10 +304,10 @@ function log(k,m){S.log.push({t:Date.now(),k:k,m:m});renderLog();}
 function sortThemes(a){return (a||[]).slice().sort(function(x,y){return THEMES.indexOf(x)-THEMES.indexOf(y);});}
 function same(a,b){if(Array.isArray(a)||Array.isArray(b)){var x=sortThemes(a).filter(function(v,i,s){return s.indexOf(v)===i;}),y=sortThemes(b).filter(function(v,i,s){return s.indexOf(v)===i;});return x.join("\u0001")===y.join("\u0001");}return String(a)===String(b);}
 function show(v){return Array.isArray(v)?v.join("、"):v;}
-function diffs(app){var o=org(app.org);return FIELDS.filter(function(f){return!same(o[f[0]],app.values[f[0]]);});}
+function diffs(app){if(app.isNew)return FIELDS.slice();var o=org(app.org);return FIELDS.filter(function(f){return!same(o[f[0]],app.values[f[0]]);});}
 
 // ---- tabs
-var TABS=[["apply","1 更新申請（団体）"],["approve","2 承認（財団）"],["manage","3 更新管理"],["search","4 検索・抽出"],["giveone","5 寄付サイト反映"]];
+var TABS=[["apply","1 更新申請（団体）"],["approve","2 承認（財団）"],["manage","3 更新管理"],["search","4 検索・抽出"],["giveone","5 寄付サイト反映"],["bulk","6 一括登録"]];
 function renderTabs(){el("tabs").innerHTML=TABS.map(function(t){var extra=t[0]==="approve"?"（"+S.apps.length+"）":"";return'<button type="button" role="tab" id="tab-'+t[0]+'" aria-selected="'+(S.tab===t[0])+'" data-t="'+t[0]+'">'+t[1]+extra+'</button>';}).join("");
   TABS.forEach(function(t){el("v-"+t[0]).classList.toggle("hidden",S.tab!==t[0]);});}
 el("tabs").addEventListener("click",function(e){var b=e.target.closest("button");if(!b)return;S.tab=b.dataset.t;renderAll();});
@@ -320,28 +338,34 @@ el("ap-form").addEventListener("submit",function(e){e.preventDefault();var o=org
   renderAll();el("ap-msg").innerHTML='<div class="msg">提出しました。「2 承認」タブに承認待ちとして表示されます。</div>';});
 
 // ---- 2 approve
+function appName(a){return a.isNew?a.values.name:org(a.org).name;}
 function renderApprove(){
-  el("apv-list").innerHTML=S.apps.length?S.apps.slice().sort(function(a,b){return b.t-a.t;}).map(function(a){return'<tr data-a="'+a.id+'" tabindex="0" class="'+(S.selApp===a.id?"sel":"")+'"><td class="num">'+fmtDT(a.t)+'</td><td>'+esc(org(a.org).name)+'</td><td class="num">'+diffs(a).length+'</td></tr>';}).join(""):'<tr><td colspan="3">承認待ちの申請はありません。「1 更新申請」から提出できます。</td></tr>';
+  el("apv-list").innerHTML=S.apps.length?S.apps.slice().sort(function(a,b){return b.t-a.t;}).map(function(a){return'<tr data-a="'+esc(a.id)+'" tabindex="0" class="'+(S.selApp===a.id?"sel":"")+'"><td class="num">'+fmtDT(a.t)+'</td><td>'+esc(appName(a))+(a.isNew?' <span class="chip c-info">新規登録</span>':"")+'</td><td>'+esc(a.src||"団体フォーム")+'</td><td class="num">'+diffs(a).length+'</td></tr>';}).join(""):'<tr><td colspan="4">承認待ちの申請はありません。「1 更新申請」から提出できます。</td></tr>';
   var a=S.apps.filter(function(x){return x.id===S.selApp;})[0];
   if(!a){el("apv-detail").innerHTML='<p class="note">一覧の行をクリックすると差分を表示します。</p>';}
-  else{var o=org(a.org);
-    el("apv-detail").innerHTML='<h3>差分：'+esc(o.name)+'</h3><div class="note">色付きの行が変更項目です（左：現在値／右：申請値）。</div><div class="tbl"><table class="diff"><thead><tr><th>項目</th><th>現在値（core）</th><th>申請値</th></tr></thead><tbody>'+
-    FIELDS.map(function(f){var c=same(o[f[0]],a.values[f[0]]);return'<tr class="'+(c?"same":"")+'"><td>'+f[1]+(c?"":' <span class="chip c-warn">変更</span>')+'</td><td class="wrap '+(c?"":"cur")+'">'+esc(show(o[f[0]]))+'</td><td class="wrap '+(c?"":"new")+'">'+esc(show(a.values[f[0]]))+'</td></tr>';}).join("")+
-    '</tbody></table></div><div class="row" style="margin-top:10px"><button class="btn" id="apv-ok" type="button">承認してcoreに反映</button><button class="btn danger" id="apv-ng" type="button">差戻し</button></div>'+
+  else{var o=a.isNew?null:org(a.org);
+    el("apv-detail").innerHTML='<h3>'+(a.isNew?'新規登録：':'差分：')+esc(appName(a))+'</h3><div class="note">'+(a.isNew?'新規登録の申請です。承認すると団体マスタ（core）に新しい団体として追加されます（認証状態は「審査中」）。':'色付きの行が変更項目です（左：現在値／右：申請値）。')+'申請者：'+esc(a.src||"団体フォーム")+'</div><div class="tbl"><table class="diff"><thead><tr><th>項目</th><th>現在値（core）</th><th>申請値</th></tr></thead><tbody>'+
+    FIELDS.map(function(f){var c=a.isNew?false:same(o[f[0]],a.values[f[0]]);return'<tr class="'+(c?"same":"")+'"><td>'+f[1]+(c?"":' <span class="chip c-warn">'+(a.isNew?"新規":"変更")+'</span>')+'</td><td class="wrap '+(c?"":"cur")+'">'+(a.isNew?"（新規）":esc(show(o[f[0]])))+'</td><td class="wrap '+(c?"":"new")+'">'+esc(show(a.values[f[0]]))+'</td></tr>';}).join("")+
+    '</tbody></table></div><div class="row" style="margin-top:10px"><button class="btn" id="apv-ok" type="button">'+(a.isNew?"承認して団体マスタに追加":"承認してcoreに反映")+'</button><button class="btn danger" id="apv-ng" type="button">差戻し</button></div>'+
     '<div id="apv-ngbox" class="hidden" style="margin-top:8px"><label for="apv-reason">差戻し理由（必須・団体に通知されます）</label><textarea id="apv-reason"></textarea><div class="row" style="margin-top:6px"><button class="btn danger" id="apv-ngok" type="button">差戻しを確定</button><span id="apv-ngmsg"></span></div></div>';}
-  el("apv-hist").innerHTML=S.history.slice().sort(function(a,b){return b.t-a.t;}).map(function(h){return'<tr><td class="num">'+fmtDT(h.t)+'</td><td>'+esc(org(h.org).name)+'</td><td>'+(h.result==="承認"?chip("更新済").replace("更新済","承認"):chip("差戻し"))+'</td><td>'+esc(h.user)+'</td><td class="wrap">'+esc(h.detail)+'</td></tr>';}).join("")||'<tr><td colspan="5">履歴はありません。</td></tr>';
+  el("apv-hist").innerHTML=S.history.slice().sort(function(a,b){return b.t-a.t;}).map(function(h){var nm=h.name||(org(h.org)?org(h.org).name:"");return'<tr><td class="num">'+fmtDT(h.t)+'</td><td>'+esc(nm)+'</td><td>'+(h.result==="承認"?'<span class="chip c-ok">承認</span>':chip("差戻し"))+'</td><td>'+esc(h.user)+'</td><td class="wrap">'+esc(h.detail)+'</td></tr>';}).join("")||'<tr><td colspan="5">履歴はありません。</td></tr>';
 }
+function nextOrgId(){var m=0;S.orgs.forEach(function(o){var n=parseInt(o.id.slice(1),10);if(n>m)m=n;});return"G"+p2(m+1);}
 el("apv-list").addEventListener("click",function(e){var tr=e.target.closest("tr[data-a]");if(tr){S.selApp=tr.dataset.a;renderApprove();}});
 el("apv-list").addEventListener("keydown",function(e){if(e.key==="Enter"){var tr=e.target.closest("tr[data-a]");if(tr){S.selApp=tr.dataset.a;renderApprove();}}});
 el("apv-detail").addEventListener("click",function(e){
-  var a=S.apps.filter(function(x){return x.id===S.selApp;})[0];if(!a)return;var o=org(a.org),user=el("apv-user").value;
-  if(e.target.id==="apv-ok"){var d=diffs(a);openConfirm({title:"承認の確認",body:o.name+"の申請を承認し、団体マスタ（core）に反映します。\n変更項目："+d.map(function(f){return f[1];}).join("、")+"\n承認者："+user,ok:"承認する",opener:"apv-ok",run:function(){FIELDS.forEach(function(f){o[f[0]]=f[0]==="themes"?sortThemes(a.values.themes):a.values[f[0]];});var t=Date.now();o.updatedAt=t;o.status="更新済";
-    S.history.push({t:t,org:o.id,result:"承認",user:user,detail:d.map(function(f){return f[1];}).join("、"),fields:d.map(function(f){return f[0];})});
-    S.formLoaded=null;S.apps=S.apps.filter(function(x){return x!==a;});S.selApp=null;log("承認",o.name+"の申請を承認しcoreに反映（"+user+"）");renderAll();}});}
+  var a=S.apps.filter(function(x){return x.id===S.selApp;})[0];if(!a)return;var o=a.isNew?null:org(a.org),user=el("apv-user").value,nm=appName(a);
+  if(e.target.id==="apv-ok"){var d=diffs(a);
+    openConfirm({title:"承認の確認",body:a.isNew?nm+"を新規団体として団体マスタ（core）に追加します（認証状態は「審査中」）。\n承認者："+user:nm+"の申請を承認し、団体マスタ（core）に反映します。\n変更項目："+d.map(function(f){return f[1];}).join("、")+"\n承認者："+user,ok:"承認する",opener:"apv-ok",run:function(){
+      var t=Date.now();
+      if(a.isNew){o={id:nextOrgId(),memo:"内部メモ（非公開）",cert:"審査中",requestAt:null};S.orgs.push(o);}
+      FIELDS.forEach(function(f){o[f[0]]=f[0]==="themes"?sortThemes(a.values.themes):a.values[f[0]];});o.updatedAt=t;o.status="更新済";
+      S.history.push({t:t,org:o.id,name:o.name,result:"承認",user:user,detail:a.isNew?"新規登録（全項目）":d.map(function(f){return f[1];}).join("、"),fields:d.map(function(f){return f[0];})});
+      S.formLoaded=null;S.apps=S.apps.filter(function(x){return x!==a;});S.selApp=null;log("承認",nm+(a.isNew?"を新規団体として団体マスタに追加（":"の申請を承認しcoreに反映（")+user+"）");renderAll();}});}
   if(e.target.id==="apv-ng"){el("apv-ngbox").classList.remove("hidden");el("apv-reason").focus();}
   if(e.target.id==="apv-ngok"){var r=el("apv-reason").value.trim();if(!r){el("apv-ngmsg").innerHTML='<span class="msg e">理由を入力してください。</span>';return;}
-    o.status="差戻し";S.history.push({t:Date.now(),org:o.id,result:"差戻し",user:user,detail:"理由："+r});S.apps=S.apps.filter(function(x){return x!==a;});S.selApp=null;
-    log("差戻し",o.name+"へ差戻しを通知（理由："+r+"／"+user+"）");renderAll();}
+    if(o)o.status="差戻し";S.history.push({t:Date.now(),org:a.org,name:nm,result:"差戻し",user:user,detail:(a.isNew?"新規登録の申請／":"")+"理由："+r});S.apps=S.apps.filter(function(x){return x!==a;});S.selApp=null;
+    log("差戻し",nm+"へ差戻しを通知（理由："+r+"／"+user+"）");renderAll();}
 });
 
 // ---- 3 manage
@@ -388,10 +412,129 @@ function renderDonationSite(){var rows=goRows();el("go-last").textContent="前�
 el("go-copy").addEventListener("click",function(){copyText(el("go-csv").value,el("go-csv"),el("go-msg"));});
 el("go-done").addEventListener("click",function(){var n=goRows().length;S.lastSync=Date.now();log("連携","寄付サイトへ反映済みとして記録（"+n+"件）");renderAll();el("go-msg").innerHTML='<span class="msg">反映日時を記録しました。</span>';});
 
+// ---- 6 一括登録
+var BULKCOLS=[["name","団体名"],["legal","法人格"],["pref","所在地（都道府県）"],["themes","活動テーマ"],["target","対象者"],["keywords","社会課題キーワード"],["budget","年間予算（万円）"],["selfRatio","自己資金比率（%）"],["email","連絡先メール"],["pjName","寄付プロジェクト名"],["pjSummary","寄付プロジェクト概要"]];
+var SAMPLE=[
+["団体名 ","法人格","所在地","活動テーマ","対象者","社会課題キーワード","年間予算","自己資金比率(%)","連絡先メール","寄付プロジェクト名","寄付プロジェクト概要","備考"],
+["はなみずき子育てひろば（サンプル）","NPO法人","神奈川県","子ども・若者、地域づくり","未就学児と保護者","子育ての孤立","300","50","hanamizuki@example.org","親子の居場所づくりプロジェクト","未就学児と保護者が気軽に集える場を運営します。（架空）","新規"],
+["やまびこ里山保全の会（サンプル）","一般社団法人","長野県","環境、地域づくり","","里山荒廃、獣害、担い手不足","350","","","","","既存の更新"],
+["NPO法人 みなと子ども食堂ネット","NPO法人","東京都","子ども・若者","小中学生と保護者","子どもの貧困","900","40","minato@example.org","","","似た名前"],
+["ゆうやけ見守り隊（架空）","任意団体","","高齢者","一人暮らし高齢者","見守り","50","90","yuyake@example.org","","","所在地なし"],
+["こだま手話サークル（架空）","任意団体","東京","福祉・障害","聴覚障害のある人","情報保障","30","95","kodama@example.org","手話講座プロジェクト","手話講座を開きます。（架空）","表記ゆれ"],
+["つばさ若者就労支援（架空）","NPO法人","大阪","子ども・若者","10代後半〜20代","若者の就労","420","35","tsubasa@example.org","就労体験プロジェクト","就労体験の場をつくります。（架空）","表記ゆれ"],
+["あかり在宅医療ネット（架空）","一般社団法人","福岡県","医療・健康","在宅療養者","在宅医療","約800","30","akari@example.org","","","予算が文字"],
+["せせらぎ川の学校（架空）","NPO法人","岐阜県","環境、教育","小学生","川の環境学習","150","120","seseragi@example.org","","","比率が範囲外"],
+["ふたば学童クラブ（架空）","任意団体","奈良県","子ども・若者","小学生","放課後の居場所","80","60","futaba.example.org","","","メール不正"],
+["みのり農業体験の会（架空）","任意団体","山形県","環境／農業","親子","食と農","120","70","minori@example.org","","","未定義テーマ"],
+["もりのこ自然学校（サンプル）","","北海道","","","","","","","","","変更なし"]
+];
+function nk(s){return String(s==null?"":s).normalize("NFKC").trim();}
+function normCol(s){return nk(s).replace(/\(.*?\)/g,"").replace(/[\s　]/g,"");}
+function normName(s){var x=nk(s).replace(/\(.*?\)/g,"");LEGALS.forEach(function(l){x=x.split(l).join("");});return x.replace(/[\s　]/g,"");}
+function rawName(s){return nk(s).replace(/[\s　]/g,"");}
+function bigrams(s){var a=[];for(var i=0;i<s.length-1;i++)a.push(s.slice(i,i+2));return a;}
+function sim(a,b){if(a===b)return 1;var x=bigrams(a),y=bigrams(b);if(!x.length||!y.length)return 0;var m=0,used=y.slice();x.forEach(function(g){var k=used.indexOf(g);if(k>=0){m++;used.splice(k,1);}});return 2*m/(x.length+y.length);}
+function normPref(s){var v=nk(s);if(!v)return{err:"所在地がありません"};if(PREFS.indexOf(v)>=0)return{v:v};
+  var c=PREFS.filter(function(p){return p.replace(/[都道府県]$/,"")===v.replace(/[都道府県]$/,"");});
+  if(c.length===1)return{v:c[0],fix:"所在地「"+v+"」を「"+c[0]+"」に補正"};return{err:"所在地「"+v+"」を都道府県として解釈できません"};}
+function parseCSV(text){text=text.replace(/^﻿/,"");var rows=[],row=[],cell="",q=false;
+  for(var i=0;i<text.length;i++){var ch=text[i];
+    if(q){if(ch==='"'){if(text[i+1]==='"'){cell+='"';i++;}else q=false;}else cell+=ch;}
+    else if(ch==='"')q=true;else if(ch===","){row.push(cell);cell="";}else if(ch==="\n"||ch==="\r"){if(ch==="\r"&&text[i+1]==="\n")i++;row.push(cell);rows.push(row);row=[];cell="";}else cell+=ch;}
+  if(cell!==""||row.length){row.push(cell);rows.push(row);}return rows.filter(function(r){return r.some(function(c){return nk(c)!=="";});});}
+
+function bulkLoad(fname,aoa){
+  if(!aoa.length){bulkMsg("e","データがありません。");return;}
+  var head=aoa[0],map=[],ignored=[];
+  head.forEach(function(h,ci){var n=normCol(h),hit=null;BULKCOLS.forEach(function(c){if(normCol(c[1])===n||nk(c[1]).replace(/\s/g,"")===nk(h).replace(/\s/g,""))hit=c[0];});
+    if(hit&&map.indexOf(hit)<0)map[ci]=hit;else if(nk(h)!=="")ignored.push(nk(h));});
+  if(map.indexOf("name")<0){bulkMsg("e","「団体名」の列が見つかりません。1行目に列名があるか確認してください。");S.bulk=null;renderBulk();return;}
+  var rows=[],seen={};
+  aoa.slice(1).forEach(function(line,ri){
+    var p={};map.forEach(function(k,ci){if(k)p[k]=String(line[ci]==null?"":line[ci]).trim();});
+    var r={line:ri+2,p:p,errs:[],warns:[],vals:{},target:null,cands:[],choice:""};
+    if(!p.name)r.errs.push("団体名がありません");else r.vals.name=p.name;
+    var ex=null;if(p.name){S.orgs.forEach(function(o){if(rawName(o.name)===rawName(p.name))ex=o;});}
+    if(ex)r.target=ex.id;
+    if(p.pref||!ex){var pr=normPref(p.pref);if(pr.err)r.errs.push(pr.err);else{r.vals.pref=pr.v;if(pr.fix)r.warns.push(pr.fix);}}
+    if(p.legal){if(LEGALS.indexOf(nk(p.legal))>=0)r.vals.legal=nk(p.legal);else r.warns.push("法人格「"+p.legal+"」は選択肢にないため取り込みません");}
+    if(p.themes){var ok=[],bad=[];p.themes.split(/[、,，／\/]/).map(nk).filter(Boolean).forEach(function(t){if(THEMES.indexOf(t)>=0)ok.push(t);else bad.push(t);});
+      if(bad.length)r.warns.push("未定義のテーマ「"+bad.join("、")+"」は除外して取り込みます");if(ok.length)r.vals.themes=sortThemes(ok);}
+    ["target","keywords","pjName","pjSummary"].forEach(function(k){if(p[k])r.vals[k]=p[k];});
+    if(p.budget){var b=nk(p.budget).replace(/,/g,"");if(/^\d+(\.\d+)?$/.test(b))r.vals.budget=Number(b);else r.errs.push("年間予算「"+p.budget+"」が数値ではありません");}
+    if(p.selfRatio){var s=nk(p.selfRatio).replace(/%$/,"");if(/^\d+(\.\d+)?$/.test(s)&&Number(s)<=100)r.vals.selfRatio=Number(s);else r.errs.push("自己資金比率「"+p.selfRatio+"」は0〜100の数値にしてください");}
+    if(p.email){if(/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(nk(p.email)))r.vals.email=p.email;else r.errs.push("連絡先メール「"+p.email+"」の形式が正しくありません");}
+    if(p.name){var nn=normName(p.name);
+      if(seen[nn])r.warns.push("ファイル内の"+seen[nn]+"行目と団体名が重複しています");else seen[nn]=r.line;
+      if(!ex){S.orgs.forEach(function(o){var sc=sim(nn,normName(o.name));if(sc>=0.8)r.cands.push({id:o.id,name:o.name,sc:sc});});
+        r.cands.sort(function(a,b){return b.sc-a.sc;});
+        if(r.cands.length)r.warns.push("既存団体「"+r.cands[0].name+"」と名前が似ています（類似度"+Math.round(r.cands[0].sc*100)+"%）");}}
+    if(ex&&S.apps.some(function(a){return a.org===ex.id;}))r.warns.push("この団体には承認待ちの申請があり、取り込むと置き換えます");
+    rows.push(r);});
+  rows.forEach(classify);
+  S.bulk={fname:fname,rows:rows,ignored:ignored,cols:map.filter(Boolean).length};
+  bulkMsg("","「"+fname+"」を読み込みました（"+rows.length+"行）。");renderBulk();
+}
+function fullValues(r,o){var v={};FIELDS.forEach(function(f){v[f[0]]=o?(Array.isArray(o[f[0]])?o[f[0]].slice():o[f[0]]):(f[0]==="themes"?[]:f[0]==="budget"||f[0]==="selfRatio"?0:f[0]==="legal"?"任意団体":"");});
+  Object.keys(r.vals).forEach(function(k){v[k]=Array.isArray(r.vals[k])?r.vals[k].slice():r.vals[k];});if(o)v.name=o.name;return v;}
+function classify(r){
+  if(r.errs.length){r.st="エラー";r.kind=r.target?"既存団体の更新":"新規登録";return;}
+  if(r.target){var d=diffs({org:r.target,values:fullValues(r,org(r.target))});if(!d.length){r.st="変更なし";r.kind="変更なし（取り込み不要）";return;}r.kind="既存団体の更新";}
+  else r.kind=r.cands.length?"類似候補あり":"新規登録";
+  r.st=r.warns.length?"要確認":"OK";}
+function stChip(s){return'<span class="chip '+({"OK":"c-ok","要確認":"c-warn","エラー":"c-err","変更なし":"c-gray"}[s])+'">'+esc(s)+'</span>';}
+// 取り込み対象の判定。戻り値 {mode:"update",id} / {mode:"new"} / null
+function decide(r,all){
+  if(r.st==="エラー"||r.st==="変更なし")return null;
+  if(r.st==="OK")return r.target?{mode:"update",id:r.target}:{mode:"new"};
+  if(!all||!r.choice||r.choice==="skip")return null;
+  if(r.choice==="new")return{mode:"new"};
+  if(r.choice==="import")return r.target?{mode:"update",id:r.target}:{mode:"new"};
+  if(r.choice.indexOf("update:")===0)return{mode:"update",id:r.choice.slice(7)};return null;}
+function plan(all){var out=[];if(!S.bulk)return out;S.bulk.rows.forEach(function(r){var d=decide(r,all);if(!d)return;
+  if(d.mode==="update"){var o=org(d.id),v=fullValues(r,o);if(!diffs({org:o.id,values:v}).length)return;out.push({r:r,org:o.id,values:v});}
+  else out.push({r:r,isNew:true,values:fullValues(r,null)});});return out;}
+function bulkMsg(k,t){el("bk-msg").innerHTML=t?'<div class="msg'+(k?" "+k:"")+'">'+esc(t)+'</div>':"";}
+function renderBulk(){var B=S.bulk,box=el("bk-result");if(!B){box.innerHTML="";return;}
+  var c={n:0,u:0,w:0,e:0,z:0};B.rows.forEach(function(r){if(r.st==="エラー")c.e++;else if(r.st==="変更なし")c.z++;else{if(r.st==="要確認")c.w++;if(r.kind==="既存団体の更新")c.u++;else if(r.kind==="新規登録")c.n++;}});
+  var pOk=plan(false),pAll=plan(true);
+  var h='<h3>結果サマリー：'+esc(B.fname)+'</h3><div class="stats"><div class="stat">新規<b>'+c.n+'</b></div><div class="stat">更新<b>'+c.u+'</b></div><div class="stat">要確認<b>'+c.w+'</b></div><div class="stat">エラー<b>'+c.e+'</b></div><div class="stat">変更なし<b>'+c.z+'</b></div></div>';
+  h+='<div class="note">対応付けた列：'+B.cols+'列'+(B.ignored.length?'　／　無視した列：'+esc(B.ignored.join("、")):"")+'。エラー行は取り込み対象から自動で外れます。既存団体の更新では、空欄のセルは現在の値のまま変えません。</div>';
+  h+='<div class="tbl"><table><thead><tr><th class="num">行</th><th>判定</th><th>区分</th><th>団体名</th><th>所在地</th><th>理由</th><th>取り込み</th></tr></thead><tbody>'+B.rows.map(function(r,i){
+    var sel="";if(r.st==="要確認"){var opts='<option value="">（選択してください）</option>';
+      if(r.cands.length&&!r.target){r.cands.forEach(function(cd){opts+='<option value="update:'+esc(cd.id)+'"'+(r.choice==="update:"+cd.id?" selected":"")+'>既存「'+esc(cd.name)+'」の更新として扱う</option>';});opts+='<option value="new"'+(r.choice==="new"?" selected":"")+'>新規として扱う</option>';}
+      else opts+='<option value="import"'+(r.choice==="import"?" selected":"")+'>取り込む</option>';
+      opts+='<option value="skip"'+(r.choice==="skip"?" selected":"")+'>取り込まない</option>';
+      sel='<select id="bk-ch-'+i+'" data-i="'+i+'" aria-label="'+r.line+'行目の扱い" style="min-width:180px">'+opts+'</select>';}
+    else sel=r.st==="OK"?"対象":"対象外";
+    return'<tr><td class="num">'+r.line+'</td><td>'+stChip(r.st)+'</td><td>'+esc(r.kind)+'</td><td class="wrap">'+esc(r.p.name||"（なし）")+'</td><td>'+esc(r.vals.pref||r.p.pref||"")+'</td><td class="wrap">'+esc(r.errs.concat(r.warns).join("／")||"-")+'</td><td>'+sel+'</td></tr>';}).join("")+'</tbody></table></div>';
+  h+='<div class="row" style="margin-top:10px"><button class="btn sub" type="button" id="bk-imp-ok" '+(pOk.length?"":"disabled")+'>OKのみ取り込む（'+pOk.length+'件）</button><button class="btn" type="button" id="bk-imp-all" '+(pAll.length?"":"disabled")+'>OKと要確認（選択済み）を取り込む（'+pAll.length+'件）</button></div>';
+  box.innerHTML=h;}
+function bulkImport(all,opener){var P=plan(all);if(!P.length)return;var a=P.filter(function(x){return x.isNew;}).length,b=P.length-a,B=S.bulk;
+  openConfirm({title:"一括登録の確認",body:P.length+"件を承認待ちに追加します（新規 "+a+"／更新 "+b+"）。\n団体マスタには承認後に反映されます。\nファイル："+B.fname,ok:"承認待ちに追加する",opener:opener,run:function(){
+    var t=Date.now(),src="一括登録（"+B.fname+"）";
+    P.forEach(function(x,i){var id="A"+t+"_"+i;if(x.isNew)S.apps.push({id:id,org:null,isNew:true,t:t,src:src,values:x.values});
+      else{S.apps=S.apps.filter(function(q){return q.org!==x.org;});S.apps.push({id:id,org:x.org,t:t,src:src,values:x.values});org(x.org).status="承認待ち";}});
+    log("申請","一括登録："+B.fname+"から"+P.length+"件を承認待ちに追加（新規 "+a+"／更新 "+b+"）");
+    S.bulk=null;S.formLoaded=null;el("bk-file").value="";renderAll();bulkMsg("",P.length+"件を承認待ちに追加しました。「2 承認」タブで確認できます。");}});}
+function readFile(f){if(!f)return;var name=f.name||"ファイル",ext=(name.split(".").pop()||"").toLowerCase();
+  if(ext==="csv"){var fr=new FileReader();fr.onload=function(){var buf=fr.result,txt;try{txt=new TextDecoder("utf-8",{fatal:true}).decode(buf);}catch(e){try{txt=new TextDecoder("shift_jis").decode(buf);}catch(e2){txt=new TextDecoder().decode(buf);}}bulkLoad(name,parseCSV(txt));};fr.readAsArrayBuffer(f);return;}
+  if(ext==="xlsx"||ext==="xls"){if(!window.XLSX){bulkMsg("e","Excel読み込み用の部品（SheetJS）を読み込めなかったため、Excelファイルを開けません。ExcelでCSV形式（UTF-8）に保存してから選んでください。");return;}
+    var fr2=new FileReader();fr2.onload=function(){try{var wb=XLSX.read(new Uint8Array(fr2.result),{type:"array"});var ws=wb.Sheets[wb.SheetNames[0]];bulkLoad(name,XLSX.utils.sheet_to_json(ws,{header:1,defval:"",raw:false}));}catch(e){bulkMsg("e","Excelファイルを読み込めませんでした。ファイルが壊れていないか確認してください。");}};fr2.readAsArrayBuffer(f);return;}
+  bulkMsg("e","対応していないファイル形式です（.xlsx／.xls／.csv のみ）。");}
+el("bk-file").addEventListener("change",function(){readFile(this.files&&this.files[0]);});
+(function(){var d=el("bk-drop");["dragenter","dragover"].forEach(function(ev){d.addEventListener(ev,function(e){e.preventDefault();d.classList.add("over");});});
+  ["dragleave","drop"].forEach(function(ev){d.addEventListener(ev,function(e){e.preventDefault();d.classList.remove("over");});});
+  d.addEventListener("drop",function(e){readFile(e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files[0]);});})();
+el("bk-sample").addEventListener("click",function(){bulkLoad("見本データ.csv",SAMPLE.map(function(r){return r.slice();}));});
+el("bk-head").addEventListener("click",function(){copyText(BULKCOLS.map(function(c){return c[1];}).join(","),el("bk-headtxt"),el("bk-headmsg"));});
+el("bk-result").addEventListener("change",function(e){var s=e.target.closest("select[data-i]");if(!s)return;S.bulk.rows[+s.dataset.i].choice=s.value;var id=s.id;renderBulk();var n=el(id);if(n)n.focus();});
+el("bk-result").addEventListener("click",function(e){if(e.target.id==="bk-imp-ok")bulkImport(false,"bk-imp-ok");if(e.target.id==="bk-imp-all")bulkImport(true,"bk-imp-all");});
+
 // ---- log
 function renderLog(){el("log").innerHTML=S.log.slice().sort(function(a,b){return b.t-a.t;}).map(function(l){var c={"申請":"c-vio","承認":"c-ok","差戻し":"c-err","不達":"c-err","依頼":"c-info","再連絡":"c-warn","連携":"c-gray","抽出":"c-gray","システム":"c-gray"}[l.k]||"c-gray";return'<li><time>'+fmtDT(l.t)+'</time><span class="chip k '+c+'">'+esc(l.k)+'</span>'+esc(l.m)+'</li>';}).join("");}
 
-function renderAll(){renderTabs();renderApplyOrgs();renderApprove();renderManage();renderSearch();renderDonationSite();renderLog();}
+function renderAll(){renderTabs();renderApplyOrgs();renderApprove();renderManage();renderSearch();renderDonationSite();renderBulk();renderLog();}
 
 // ---- 共通確認ダイアログ
 var DLG={run:null,opener:null};
@@ -405,7 +548,7 @@ document.addEventListener("keydown",function(e){if(e.key==="Escape"&&!el("dlg").
 // ---- header
 el("resetBtn").addEventListener("click",function(){el("resetConfirm").classList.remove("hidden");el("resetYes").focus();});
 el("resetNo").addEventListener("click",function(){el("resetConfirm").classList.add("hidden");});
-el("resetYes").addEventListener("click",function(){var tab=S.tab;initState();S.tab=tab;el("resetConfirm").classList.add("hidden");log("システム","初期データに戻しました");renderAll();});
+el("resetYes").addEventListener("click",function(){var tab=S.tab;initState();el("bk-file").value="";bulkMsg("","");el("bk-headtxt").classList.add("hidden");el("bk-headmsg").innerHTML="";S.tab=tab;el("resetConfirm").classList.add("hidden");log("システム","初期データに戻しました");renderAll();});
 el("themeSel").addEventListener("change",function(){var v=this.value;if(v)document.documentElement.setAttribute("data-theme",v);else document.documentElement.removeAttribute("data-theme");});
 
 fillSelects();initState();renderAll();
