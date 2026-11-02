@@ -1,0 +1,416 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>認証団体DB 試作版</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap');
+:root{
+  --bg:#f5f6f4;--surface:#ffffff;--surface2:#eef0ec;--text:#1f2a24;--muted:#5d6a63;--border:#d5dbd6;
+  --accent:#1f6f5c;--accent-text:#ffffff;--accent-soft:#dcefe8;--focus:#2b7fd0;
+  --ok-bg:#dcefe2;--ok-fg:#1d5c32;--warn-bg:#fbecc8;--warn-fg:#7a5300;--err-bg:#f8dcdc;--err-fg:#8a1f1f;
+  --info-bg:#dde8f6;--info-fg:#1d4775;--gray-bg:#e6e8e6;--gray-fg:#4b544f;--vio-bg:#e9e2f2;--vio-fg:#4f3a73;
+  --del-bg:#fbe3e3;--add-bg:#ddf2e2;--bar:#3f8f7a;--overlay:rgba(20,28,24,.5);
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#161b19;--surface:#1f2623;--surface2:#262f2b;--text:#e3e9e5;--muted:#9aa8a0;--border:#38443e;
+  --accent:#4fb89b;--accent-text:#0f1a16;--accent-soft:#1f3a32;--focus:#6aaef0;
+  --ok-bg:#1e3a28;--ok-fg:#9fdcb3;--warn-bg:#3d3112;--warn-fg:#f0cd7a;--err-bg:#422020;--err-fg:#f4a9a9;
+  --info-bg:#1d2f45;--info-fg:#a8c9f0;--gray-bg:#2e3532;--gray-fg:#bcc5c0;--vio-bg:#332a42;--vio-fg:#cdb9ec;
+  --del-bg:#4a2424;--add-bg:#1f4029;--bar:#4fb89b;--overlay:rgba(0,0,0,.65);color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#161b19;--surface:#1f2623;--surface2:#262f2b;--text:#e3e9e5;--muted:#9aa8a0;--border:#38443e;
+  --accent:#4fb89b;--accent-text:#0f1a16;--accent-soft:#1f3a32;--focus:#6aaef0;
+  --ok-bg:#1e3a28;--ok-fg:#9fdcb3;--warn-bg:#3d3112;--warn-fg:#f0cd7a;--err-bg:#422020;--err-fg:#f4a9a9;
+  --info-bg:#1d2f45;--info-fg:#a8c9f0;--gray-bg:#2e3532;--gray-fg:#bcc5c0;--vio-bg:#332a42;--vio-fg:#cdb9ec;
+  --del-bg:#4a2424;--add-bg:#1f4029;--bar:#4fb89b;--overlay:rgba(0,0,0,.65);color-scheme:dark}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--text);font-family:"Noto Sans JP","Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,sans-serif;font-size:14px;line-height:1.6}
+.page{max-width:1280px;margin:0 auto;padding-block:12px 32px;padding-left:max(16px, env(safe-area-inset-left,0px));padding-right:max(16px, env(safe-area-inset-right,0px))}
+header{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;justify-content:space-between;border-bottom:2px solid var(--accent);padding-bottom:8px;margin-bottom:8px}
+h1{font-size:18px;margin:0}
+.badge-proto{background:var(--warn-bg);color:var(--warn-fg);font-size:12px;padding:2px 8px;border-radius:3px;font-weight:700}
+nav{display:flex;flex-wrap:wrap;gap:4px;margin:8px 0 12px}
+nav button{background:var(--surface);border:1px solid var(--border);color:var(--text);padding:6px 12px;border-radius:4px;cursor:pointer;font:inherit}
+nav button[aria-selected="true"]{background:var(--accent);color:var(--accent-text);border-color:var(--accent);font-weight:700}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:16px;align-items:start}
+@media (max-width:900px){.layout{grid-template-columns:minmax(0,1fr)}}
+section.panel{background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:14px}
+h2{font-size:16px;margin:0 0 4px}
+h3{font-size:14px;margin:14px 0 6px}
+.where{display:inline-block;font-size:12px;padding:1px 8px;border-radius:3px;margin:0 6px 6px 0;border:1px solid}
+.where.in{background:var(--accent-soft);color:var(--accent);border-color:var(--accent)}
+.where.out{background:var(--err-bg);color:var(--err-fg);border-color:var(--err-fg)}
+.note{font-size:12px;color:var(--muted);background:var(--surface2);border-left:3px solid var(--border);padding:6px 10px;margin:8px 0}
+.note.warn{border-left-color:var(--warn-fg)}
+label{display:block;font-size:12px;color:var(--muted);margin-bottom:2px}
+input[type=text],input[type=number],input[type=email],select,textarea{width:100%;font:inherit;color:var(--text);background:var(--surface);border:1px solid var(--border);border-radius:3px;padding:6px 8px}
+textarea{min-height:60px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px 14px}
+.full{grid-column:1/-1}
+button.btn{font:inherit;padding:6px 14px;border-radius:3px;border:1px solid var(--accent);background:var(--accent);color:var(--accent-text);cursor:pointer}
+button.btn.sub{background:var(--surface);color:var(--accent)}
+button.btn.danger{background:var(--surface);color:var(--err-fg);border-color:var(--err-fg)}
+button.btn.sm{padding:2px 8px;font-size:12px}
+button:disabled{opacity:.45;cursor:not-allowed}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.tags{display:flex;flex-wrap:wrap;gap:6px}
+.tags label{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--border);padding:2px 8px;border-radius:12px;color:var(--text);font-size:13px;margin:0;cursor:pointer;background:var(--surface)}
+.tags label:has(input:checked){background:var(--accent-soft);border-color:var(--accent)}
+.tbl{overflow-x:auto;border:1px solid var(--border);border-radius:3px}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{padding:6px 8px;line-height:1.5;border-bottom:1px solid var(--border);text-align:left;vertical-align:top;white-space:nowrap}
+td.wrap{white-space:normal;min-width:160px}
+th{background:var(--surface2);font-weight:500;color:var(--muted);position:sticky;top:0}
+.num{text-align:right;font-variant-numeric:tabular-nums}
+.chip{display:inline-block;font-size:12px;padding:0 8px;border-radius:10px;white-space:nowrap}
+.c-gray{background:var(--gray-bg);color:var(--gray-fg)}.c-info{background:var(--info-bg);color:var(--info-fg)}
+.c-warn{background:var(--warn-bg);color:var(--warn-fg)}.c-err{background:var(--err-bg);color:var(--err-fg)}
+.c-ok{background:var(--ok-bg);color:var(--ok-fg)}.c-vio{background:var(--vio-bg);color:var(--vio-fg)}
+.old{color:var(--err-fg);font-size:12px;font-weight:700}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+table td,table th{vertical-align:top}
+.diff td.cur{background:var(--del-bg)}.diff td.new{background:var(--add-bg);font-weight:700}
+.diff tr.same td{color:var(--muted)}
+.stats{display:flex;flex-wrap:wrap;gap:10px;margin:8px 0}
+.stat{border:1px solid var(--border);padding:6px 12px;border-radius:3px;min-width:130px}
+.stat b{display:block;font-size:20px;font-variant-numeric:tabular-nums}
+.bars{display:grid;grid-template-columns:70px 1fr 32px;gap:4px 8px;align-items:center;font-size:12px;max-width:520px}
+.bars .b{height:14px;background:var(--bar);border-radius:2px}
+.bars .n{font-variant-numeric:tabular-nums;text-align:right}
+aside{position:sticky;top:8px}
+#log{list-style:none;margin:0;padding:0;max-height:70vh;overflow-y:auto;font-size:12px}
+#log li{border-bottom:1px solid var(--border);padding:5px 0}
+#log time{color:var(--muted);font-variant-numeric:tabular-nums;margin-right:6px}
+#log .k{font-size:11px;margin-right:4px}
+.hidden{display:none}
+.msg{font-size:13px;color:var(--ok-fg);background:var(--ok-bg);padding:4px 10px;border-radius:3px;margin:6px 0}
+.msg.e{color:var(--err-fg);background:var(--err-bg)}
+.list-click tr{cursor:pointer}.list-click tr:hover td{background:var(--surface2)}
+tr.sel td{background:var(--accent-soft)}
+.dlg-back{position:fixed;inset:0;background:var(--overlay);display:flex;align-items:center;justify-content:center;padding:16px;z-index:50}
+.dlg-back.hidden{display:none}
+.dlg{background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:4px;padding:16px;width:min(460px,100%);max-height:90vh;overflow-y:auto}
+#dlg-body{white-space:pre-wrap;margin:8px 0 14px}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+
+<div class="page">
+<header>
+  <div class="row"><h1>寄付適格認証団体DB</h1><span class="badge-proto">試作版・データはすべて架空</span></div>
+  <div class="row">
+    <label for="themeSel" style="margin:0">表示</label>
+    <select id="themeSel" style="width:auto"><option value="">自動</option><option value="light">ライト</option><option value="dark">ダーク</option></select>
+    <button class="btn danger sm" id="resetBtn" type="button">初期データに戻す</button>
+  </div>
+</header>
+<p class="note">このページは検討用の試作版です。団体名・数値・メールアドレスはすべて架空です。</p>
+<div id="resetConfirm" class="note warn hidden">操作内容をすべて消して初期データに戻します。よろしいですか？
+  <button class="btn danger sm" id="resetYes" type="button">戻す</button> <button class="btn sub sm" id="resetNo" type="button">やめる</button></div>
+
+<nav role="tablist" id="tabs"></nav>
+
+<div class="layout">
+<main>
+<!-- 1 申請 -->
+<section class="panel" id="v-apply" data-tab>
+  <span class="where out">要件（既存値入りフォーム）・概念図では「Googleフォーム取込み」</span><span class="where in">概念図：raw層への取込み</span>
+  <h2>1. 団体の更新申請（団体側の画面）</h2>
+  <div class="note">Googleフォームでは既存の登録値を入れた状態での修正が難しい点を想定した画面です。団体を選ぶと現在の登録内容が入った状態で開きます。</div>
+  <div class="grid" style="margin-bottom:10px"><div><label for="ap-org">申請する団体</label><select id="ap-org"></select></div></div>
+  <form id="ap-form">
+    <div class="grid">
+      <div class="full"><label for="ap-name">団体名</label><input type="text" id="ap-name" required></div>
+      <div><label for="ap-legal">法人格</label><select id="ap-legal"></select></div>
+      <div><label for="ap-pref">所在地（都道府県）</label><select id="ap-pref"></select></div>
+      <div class="full"><label id="ap-themes-l">活動テーマ（複数選択可）</label><div class="tags" id="ap-themes" aria-labelledby="ap-themes-l"></div></div>
+      <div><label for="ap-target">対象者</label><input type="text" id="ap-target"></div>
+      <div><label for="ap-kw">社会課題キーワード（読点区切り）</label><input type="text" id="ap-kw"></div>
+      <div><label for="ap-budget">年間予算（万円）</label><input type="number" id="ap-budget" min="0"></div>
+      <div><label for="ap-self">自己資金比率（%）</label><input type="number" id="ap-self" min="0" max="100"></div>
+      <div class="full"><label for="ap-email">連絡先メール</label><input type="email" id="ap-email"></div>
+      <div class="full"><label for="ap-pj">寄付プロジェクト名</label><input type="text" id="ap-pj"></div>
+      <div class="full"><label for="ap-pjsum">寄付プロジェクト概要</label><textarea id="ap-pjsum"></textarea></div>
+    </div>
+    <div class="row" style="margin-top:12px"><button class="btn" type="submit" id="ap-submit">提出する</button><span class="note" style="margin:0">提出すると「承認待ち」になり、財団に通知されます（試作のため実際の通知は送りません）。</span></div>
+    <div id="ap-msg"></div>
+  </form>
+</section>
+
+<!-- 2 承認 -->
+<section class="panel hidden" id="v-approve" data-tab>
+  <span class="where in">概念図：承認ゲート（raw → core）</span><span class="where out">要件・概念図に記載なし：差分確認・差戻し</span>
+  <h2>2. 承認（財団側）</h2>
+  <div class="note">財団が承認したものだけが団体マスタ（core）に反映されます。</div>
+  <div class="grid" style="max-width:300px;margin-bottom:8px"><div><label for="apv-user">承認者</label><select id="apv-user"><option>職員A</option><option>職員B</option><option>職員C</option></select></div></div>
+  <h3>承認待ちの申請</h3>
+  <div class="tbl"><table class="list-click"><thead><tr><th>申請日時</th><th>団体名</th><th class="num">変更項目数</th></tr></thead><tbody id="apv-list"></tbody></table></div>
+  <div id="apv-detail"></div>
+  <h3>変更履歴（core反映）</h3>
+  <div class="tbl"><table><thead><tr><th>日時</th><th>団体名</th><th>結果</th><th>担当</th><th>変更項目・理由</th></tr></thead><tbody id="apv-hist"></tbody></table></div>
+</section>
+
+<!-- 3 更新管理 -->
+<section class="panel hidden" id="v-manage" data-tab>
+  <span class="where out">要件U03・概念図に記載なし</span>
+  <h2>3. 更新管理（更新依頼・未回答・不達・再連絡）</h2>
+  <div class="note">「更新依頼を送る」「再連絡」は状態と日付を変えるだけで、実際のメール送信は行いません。最終更新から365日を超えた団体には「情報が古い」と表示します。</div>
+  <div class="row" style="margin-bottom:8px"><label for="mg-filter" style="margin:0">ステータス絞込み</label><select id="mg-filter" style="width:auto"></select><span id="mg-count" class="note" style="margin:0"></span></div>
+  <div class="tbl"><table><thead><tr><th>団体名</th><th>ステータス</th><th>最終更新日</th><th>依頼日</th><th class="num">依頼からの経過日数</th><th>操作</th></tr></thead><tbody id="mg-list"></tbody></table></div>
+  <div class="row" style="margin-top:8px"><label for="mg-bounce-org" style="margin:0">不達のテスト（模擬）：</label><select id="mg-bounce-org" style="width:auto;max-width:260px"></select><button class="btn sub sm" id="mg-bounce" type="button">不達として記録</button></div>
+</section>
+
+<!-- 4 検索 -->
+<section class="panel hidden" id="v-search" data-tab>
+  <span class="where in">概念図：mart層 → BIツール（例：Looker Studio）画面の再現</span>
+  <h2>4. 検索・抽出</h2>
+  <form id="sr-form" class="grid">
+    <div><label for="sr-theme">テーマ</label><select id="sr-theme"></select></div>
+    <div><label for="sr-region">地域</label><select id="sr-region"></select></div>
+    <div><label for="sr-budget">年間予算 下限（万円）</label><input type="number" id="sr-budget" min="0"></div>
+    <div><label for="sr-self">自己資金比率 下限（%）</label><input type="number" id="sr-self" min="0" max="100"></div>
+    <div><label for="sr-kw">キーワード</label><input type="text" id="sr-kw" placeholder="例：子ども"></div>
+    <div style="align-self:end"><label style="display:flex;gap:6px;align-items:center;color:var(--text);font-size:14px"><input type="checkbox" id="sr-cert">認証済のみ</label></div>
+  </form>
+  <div class="stats"><div class="stat">該当件数<b id="sr-n">0</b></div><div class="stat">平均年間予算（万円）<b id="sr-avg">-</b></div></div>
+  <h3>地方別件数</h3><div class="bars" id="sr-bars"></div>
+  <h3>結果一覧</h3>
+  <div class="tbl"><table><thead><tr><th>団体名</th><th>認証状態</th><th>所在地</th><th>テーマ</th><th class="num">年間予算</th><th class="num">自己資金比率</th><th>最終更新日</th></tr></thead><tbody id="sr-list"></tbody></table></div>
+  <div class="row" style="margin-top:8px"><button class="btn" id="sr-copy" type="button">CSVをコピー</button><span id="sr-copymsg"></span></div>
+  <textarea id="sr-csv" class="hidden" rows="6" readonly aria-label="CSVテキスト"></textarea>
+</section>
+
+<!-- 5 寄付サイト -->
+<section class="panel hidden" id="v-giveone" data-tab>
+  <span class="where in">概念図：寄付サイトへの片方向連携（CSV）</span>
+  <h2>5. 寄付サイト反映</h2>
+  <div class="note">承認済みで、前回反映以降に変更があった団体だけを抽出します。出力は公開項目（団体名・所在地・テーマ・PJ名・PJ概要）のみです。<b>連絡先メール・年間予算・自己資金比率・内部メモ等の非公開項目は含めません。</b></div>
+  <div class="note warn">反映結果の照合（寄付サイト側に正しく入ったかの確認）やエラー時の再処理は <b>要件T07・概念図に記載なし</b>。この試作では扱っていません。</div>
+  <p id="go-last" class="note"></p>
+  <div class="tbl"><table><thead><tr><th>団体名</th><th>所在地</th><th>テーマ</th><th>PJ名</th><th>PJ概要</th><th>core更新日時</th></tr></thead><tbody id="go-list"></tbody></table></div>
+  <h3>CSVプレビュー</h3>
+  <textarea id="go-csv" rows="6" readonly aria-label="寄付サイト用CSV"></textarea>
+  <div class="row" style="margin-top:8px"><button class="btn sub" id="go-copy" type="button">CSVをコピー</button><button class="btn" id="go-done" type="button">反映済みにする</button><span id="go-msg"></span></div>
+</section>
+</main>
+
+<aside class="panel" style="background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:12px">
+  <h2>通知・操作ログ</h2>
+  <div class="note" style="margin-top:4px">最新順。試作のため実際の通知・メールは送られません。</div>
+  <ul id="log"></ul>
+</aside>
+</div>
+</div>
+
+<div id="dlg" class="dlg-back hidden"><div class="dlg" role="dialog" aria-modal="true" aria-labelledby="dlg-title" aria-describedby="dlg-body"><h2 id="dlg-title"></h2><p id="dlg-body"></p><div class="row" style="justify-content:flex-end"><button class="btn sub" type="button" id="dlg-cancel">キャンセル</button><button class="btn" type="button" id="dlg-ok">実行</button></div></div></div>
+
+<script>
+(function(){
+"use strict";
+var DAY=86400000, NOW=new Date();
+function daysAgo(n,h){var d=new Date(NOW.getTime()-n*DAY);d.setHours(h||10,(n*7)%60,0,0);return d.getTime();}
+function fmtD(t){if(!t)return"-";var d=new Date(t);return d.getFullYear()+"/"+p2(d.getMonth()+1)+"/"+p2(d.getDate());}
+function fmtDT(t){var d=new Date(t);return (d.getMonth()+1)+"月"+d.getDate()+"日 "+p2(d.getHours())+":"+p2(d.getMinutes());}
+function p2(n){return(n<10?"0":"")+n;}
+function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];});}
+function el(id){return document.getElementById(id);}
+function ageDays(t){return Math.floor((Date.now()-t)/DAY);}
+
+var LEGALS=["NPO法人","一般社団法人","公益社団法人","一般財団法人","任意団体"];
+var THEMES=["子ども・若者","教育","福祉・障害","高齢者","環境","災害支援","地域づくり","国際協力","文化・芸術","医療・健康"];
+var REGIONS={"北海道・東北":["北海道","青森県","岩手県","宮城県","秋田県","山形県","福島県"],"関東":["茨城県","栃木県","群馬県","埼玉県","千葉県","東京都","神奈川県"],"中部":["新潟県","富山県","石川県","福井県","山梨県","長野県","岐阜県","静岡県","愛知県"],"近畿":["三重県","滋賀県","京都府","大阪府","兵庫県","奈良県","和歌山県"],"中国・四国":["鳥取県","島根県","岡山県","広島県","山口県","徳島県","香川県","愛媛県","高知県"],"九州・沖縄":["福岡県","佐賀県","長崎県","熊本県","大分県","宮崎県","鹿児島県","沖縄県"]};
+var PREFS=[];Object.keys(REGIONS).forEach(function(r){PREFS=PREFS.concat(REGIONS[r]);});
+function regionOf(p){for(var r in REGIONS){if(REGIONS[r].indexOf(p)>=0)return r;}return"";}
+var FIELDS=[["name","団体名"],["legal","法人格"],["pref","所在地"],["themes","活動テーマ"],["target","対象者"],["keywords","社会課題キーワード"],["budget","年間予算（万円）"],["selfRatio","自己資金比率（%）"],["email","連絡先メール"],["pjName","寄付プロジェクト名"],["pjSummary","寄付プロジェクト概要"]];
+var STATUSES=[["未依頼","c-gray"],["依頼済・未回答","c-info"],["不達","c-err"],["再連絡済","c-warn"],["承認待ち","c-vio"],["更新済","c-ok"],["差戻し","c-err"]];
+function chip(s){var c="c-gray";STATUSES.forEach(function(x){if(x[0]===s)c=x[1];});return'<span class="chip '+c+'">'+esc(s)+'</span>';}
+function certChip(s){return'<span class="chip '+(s==="認証済"?"c-ok":s==="審査中"?"c-info":"c-warn")+'">'+esc(s)+'</span>';}
+
+// 架空データ [名称, 法人格, 県, テーマ, 対象者, KW, 予算, 自己資金, 認証, 最終更新(日前), ステータス, 依頼(日前)]
+var RAW=[
+["みなと子ども食堂ネット（サンプル）","NPO法人","東京都",[0,6],"小中学生と保護者","子どもの貧困、孤食",850,42,"認証済",120,"更新済",null],
+["やまびこ里山保全の会（サンプル）","一般社団法人","長野県",[4,6],"地域住民","里山荒廃、獣害",320,65,"認証済",410,"依頼済・未回答",21],
+["そらいろ学習支援センター（サンプル）","NPO法人","大阪府",[1,0],"中高生","教育格差、不登校",1200,38,"認証済",200,"承認待ち",30],
+["ひだまり高齢者サロン（架空）","任意団体","愛媛県",[3,6],"一人暮らし高齢者","社会的孤立",90,80,"審査中",60,"未依頼",null],
+["しおかぜ海岸クリーン隊（架空）","NPO法人","神奈川県",[4],"市民ボランティア","海洋ごみ",210,55,"認証済",500,"不達",45],
+["あおば障害者就労サポート（サンプル）","公益社団法人","宮城県",[2],"障害のある若者","就労機会の不足",3400,30,"認証済",90,"更新済",null],
+["つむぎ多文化共生ネット（架空）","一般社団法人","愛知県",[7,1],"外国ルーツの子ども","日本語教育、多文化共生",640,25,"要確認",380,"再連絡済",50],
+["きぼう災害ボランティア連絡会（サンプル）","NPO法人","熊本県",[5,6],"被災地域住民","災害復興、防災",1800,20,"認証済",150,"承認待ち",25],
+["ほしぞら小児在宅ケア（架空）","NPO法人","福岡県",[9,0],"医療的ケア児と家族","在宅医療、レスパイト",2600,35,"認証済",300,"依頼済・未回答",14],
+["もりのこ自然学校（サンプル）","NPO法人","北海道",[4,1],"幼児・小学生","自然体験の減少",480,60,"認証済",30,"更新済",null],
+["まちかど文化アトリエ（架空）","一般社団法人","京都府",[8,6],"地域住民・若手作家","伝統文化の継承",270,70,"審査中",400,"未依頼",null],
+["ささえあい介護者の会（サンプル）","任意団体","広島県",[3,2],"家族介護者","介護離職、ヤングケアラー",60,90,"要確認",520,"不達",60],
+["わかば若者居場所プロジェクト（架空）","NPO法人","埼玉県",[0],"10代〜20代","居場所、ひきこもり",720,33,"認証済",180,"依頼済・未回答",10],
+["いずみ水と緑の基金（サンプル）","一般財団法人","静岡県",[4],"流域住民","水源保全",5200,75,"認証済",250,"更新済",null],
+["なないろフードバンク（架空）","NPO法人","兵庫県",[2,6],"生活困窮世帯","食品ロス、生活困窮",950,40,"認証済",370,"再連絡済",40],
+["こもれび読書推進会（サンプル）","任意団体","石川県",[1,8],"子どもと保護者","読書離れ",40,95,"審査中",100,"未依頼",null],
+["ひかり国際教育支援（架空）","NPO法人","東京都",[7,1],"途上国の子ども","教育機会、難民",4100,28,"認証済",210,"更新済",null],
+["さくら認知症カフェ連絡会（サンプル）","一般社団法人","千葉県",[3,9],"認知症の人と家族","認知症、地域包括ケア",180,50,"認証済",450,"依頼済・未回答",35],
+["うみべ漁村再生クラブ（架空）","NPO法人","長崎県",[6,4],"漁村住民","過疎化、担い手不足",330,45,"要確認",600,"未依頼",null],
+["あゆみ発達支援ネット（サンプル）","NPO法人","岡山県",[2,0],"発達障害のある子ども","療育、早期支援",1500,32,"認証済",80,"更新済",null],
+["たんぽぽひとり親支援（架空）","NPO法人","沖縄県",[0,2],"ひとり親家庭","子どもの貧困、ひとり親",560,22,"認証済",160,"差戻し",28],
+["いろどり地域医療を考える会（サンプル）","一般社団法人","鹿児島県",[9,6],"離島住民","医療アクセス",410,48,"審査中",330,"依頼済・未回答",8],
+["みどりの学び舎（架空）","NPO法人","新潟県",[1,4],"小学生","環境教育",260,58,"認証済",395,"依頼済・未回答",18],
+["かがやき障害者アート工房（サンプル）","NPO法人","群馬県",[8,2],"障害のある作家","障害者アート、表現の場",380,62,"認証済",140,"更新済",null]
+];
+var PJ=["居場所づくり","学びの場の運営","活動拠点の整備","担い手の育成","相談窓口の拡充","調査と啓発"];
+
+var S;
+function initState(){
+  var orgs=RAW.map(function(r,i){
+    return{id:"G"+p2(i+1),name:r[0],legal:r[1],pref:r[2],themes:r[3].map(function(k){return THEMES[k];}),target:r[4],keywords:r[5],budget:r[6],selfRatio:r[7],
+      email:"info"+(i+1)+"@example.org",pjName:r[0].replace(/（.*?）/,"")+" "+PJ[i%PJ.length]+"プロジェクト",pjSummary:r[4]+"を対象に、"+r[5].split("、")[0]+"の課題に取り組むための資金を募ります。（架空の説明文）",
+      memo:"内部メモ（非公開）",cert:r[8],updatedAt:daysAgo(r[9]),status:r[10],requestAt:r[11]==null?null:daysAgo(r[11],9)};
+  });
+  S={orgs:orgs,apps:[],history:[],log:[],lastSync:daysAgo(45,15),selApp:null,tab:"apply"};
+  // 初期の承認待ち2件
+  addApp("G03",{budget:1350,keywords:"教育格差、不登校、オンライン学習",pjSummary:"中高生を対象に、無料の学習会とオンライン学習相談を行うための資金を募ります。（架空の説明文）"},daysAgo(2,14));
+  addApp("G08",{email:"contact@kibou-sample.example.org",themes:["災害支援","地域づくり","福祉・障害"],selfRatio:24},daysAgo(1,11));
+  // 前回反映後に承認済みの変更（寄付サイト対象になる）
+  ["G01","G10","G20"].forEach(function(id,i){var o=org(id);o.updatedAt=daysAgo(30-i*8);});
+  S.history.push({t:org("G01").updatedAt,org:"G01",result:"承認",user:"職員C",detail:"寄付プロジェクト名",fields:["pjName"]});
+  S.history.push({t:org("G10").updatedAt,org:"G10",result:"承認",user:"職員B",detail:"寄付プロジェクト概要",fields:["pjSummary"]});
+  S.history.push({t:org("G20").updatedAt,org:"G20",result:"承認",user:"職員A",detail:"年間予算（万円）、連絡先メール",fields:["budget","email"]});
+  S.history.push({t:daysAgo(5,16),org:"G21",result:"差戻し",user:"職員A",detail:"理由：年間予算の根拠資料が未添付"});
+  var L=[[daysAgo(45,15),"連携","寄付サイトへ反映済み（4件）"],[daysAgo(35,9),"依頼","さくら認知症カフェ連絡会（サンプル）ほかへ更新依頼"],[daysAgo(5,16),"差戻し","たんぽぽひとり親支援（架空）の申請を差戻し"],[daysAgo(2,14),"申請","そらいろ学習支援センター（サンプル）から更新申請"],[daysAgo(1,11),"申請","きぼう災害ボランティア連絡会（サンプル）から更新申請"]];
+  L.forEach(function(x){S.log.push({t:x[0],k:x[1],m:x[2]});});
+}
+function org(id){for(var i=0;i<S.orgs.length;i++)if(S.orgs[i].id===id)return S.orgs[i];return null;}
+function addApp(id,changes,t){var o=org(id),v={};FIELDS.forEach(function(f){v[f[0]]=Array.isArray(o[f[0]])?o[f[0]].slice():o[f[0]];});Object.keys(changes).forEach(function(k){v[k]=changes[k];});v.themes=sortThemes(v.themes);S.apps.push({id:"A"+(S.apps.length+1)+"_"+t,org:id,t:t,values:v});}
+function log(k,m){S.log.push({t:Date.now(),k:k,m:m});renderLog();}
+function sortThemes(a){return (a||[]).slice().sort(function(x,y){return THEMES.indexOf(x)-THEMES.indexOf(y);});}
+function same(a,b){if(Array.isArray(a)||Array.isArray(b)){var x=sortThemes(a).filter(function(v,i,s){return s.indexOf(v)===i;}),y=sortThemes(b).filter(function(v,i,s){return s.indexOf(v)===i;});return x.join("\u0001")===y.join("\u0001");}return String(a)===String(b);}
+function show(v){return Array.isArray(v)?v.join("、"):v;}
+function diffs(app){var o=org(app.org);return FIELDS.filter(function(f){return!same(o[f[0]],app.values[f[0]]);});}
+
+// ---- tabs
+var TABS=[["apply","1 更新申請（団体）"],["approve","2 承認（財団）"],["manage","3 更新管理"],["search","4 検索・抽出"],["giveone","5 寄付サイト反映"]];
+function renderTabs(){el("tabs").innerHTML=TABS.map(function(t){var extra=t[0]==="approve"?"（"+S.apps.length+"）":"";return'<button type="button" role="tab" id="tab-'+t[0]+'" aria-selected="'+(S.tab===t[0])+'" data-t="'+t[0]+'">'+t[1]+extra+'</button>';}).join("");
+  TABS.forEach(function(t){el("v-"+t[0]).classList.toggle("hidden",S.tab!==t[0]);});}
+el("tabs").addEventListener("click",function(e){var b=e.target.closest("button");if(!b)return;S.tab=b.dataset.t;renderAll();});
+
+// ---- 1 apply
+function fillSelects(){
+  el("ap-legal").innerHTML=LEGALS.map(function(x){return"<option>"+x+"</option>";}).join("");
+  el("ap-pref").innerHTML=PREFS.map(function(x){return"<option>"+x+"</option>";}).join("");
+  el("ap-themes").innerHTML=THEMES.map(function(x,i){return'<label for="ap-th-'+i+'"><input type="checkbox" id="ap-th-'+i+'" value="'+x+'">'+x+'</label>';}).join("");
+  el("sr-theme").innerHTML='<option value="">すべて</option>'+THEMES.map(function(x){return"<option>"+x+"</option>";}).join("");
+  var rg='<option value="">全国</option>';Object.keys(REGIONS).forEach(function(r){rg+='<optgroup label="'+r+'"><option value="R:'+r+'">'+r+'（地方全体）</option>'+REGIONS[r].map(function(p){return'<option value="P:'+p+'">'+p+'</option>';}).join("")+'</optgroup>';});
+  el("sr-region").innerHTML=rg;
+  el("mg-filter").innerHTML='<option value="">すべて</option><option value="__old">情報が古い（365日超）</option>'+STATUSES.map(function(s){return"<option>"+s[0]+"</option>";}).join("");
+}
+function renderApplyOrgs(){var cur=el("ap-org").value;el("ap-org").innerHTML=S.orgs.map(function(o){return'<option value="'+o.id+'">'+esc(o.name)+'</option>';}).join("");if(cur&&org(cur))el("ap-org").value=cur;if(S.formLoaded!==el("ap-org").value)loadForm();}
+function loadForm(){var o=org(el("ap-org").value);if(!o)return;S.formLoaded=o.id;
+  el("ap-name").value=o.name;el("ap-legal").value=o.legal;el("ap-pref").value=o.pref;el("ap-target").value=o.target;el("ap-kw").value=o.keywords;el("ap-budget").value=o.budget;el("ap-self").value=o.selfRatio;el("ap-email").value=o.email;el("ap-pj").value=o.pjName;el("ap-pjsum").value=o.pjSummary;
+  THEMES.forEach(function(t,i){el("ap-th-"+i).checked=o.themes.indexOf(t)>=0;});
+  var pend=S.apps.some(function(a){return a.org===o.id;});
+  el("ap-msg").innerHTML=pend?'<div class="msg e">この団体はすでに承認待ちの申請があります。再提出すると新しい申請で置き換えます。</div>':"";}
+el("ap-org").addEventListener("change",loadForm);
+el("ap-form").addEventListener("submit",function(e){e.preventDefault();var o=org(el("ap-org").value);
+  var v={name:el("ap-name").value.trim(),legal:el("ap-legal").value,pref:el("ap-pref").value,themes:THEMES.filter(function(t,i){return el("ap-th-"+i).checked;}),target:el("ap-target").value.trim(),keywords:el("ap-kw").value.trim(),budget:Number(el("ap-budget").value)||0,selfRatio:Number(el("ap-self").value)||0,email:el("ap-email").value.trim(),pjName:el("ap-pj").value.trim(),pjSummary:el("ap-pjsum").value.trim()};
+  if(!v.name){el("ap-msg").innerHTML='<div class="msg e">団体名を入力してください。</div>';return;}
+  var tmp={org:o.id,values:v};if(diffs(tmp).length===0){el("ap-msg").innerHTML='<div class="msg e">変更された項目がありません。</div>';return;}
+  S.apps=S.apps.filter(function(a){return a.org!==o.id;});var t=Date.now();S.apps.push({id:"A"+t,org:o.id,t:t,values:v});S.formLoaded=null;o.status="承認待ち";
+  log("申請",o.name+"から更新申請（変更"+diffs(tmp).length+"項目）");
+  renderAll();el("ap-msg").innerHTML='<div class="msg">提出しました。「2 承認」タブに承認待ちとして表示されます。</div>';});
+
+// ---- 2 approve
+function renderApprove(){
+  el("apv-list").innerHTML=S.apps.length?S.apps.slice().sort(function(a,b){return b.t-a.t;}).map(function(a){return'<tr data-a="'+a.id+'" tabindex="0" class="'+(S.selApp===a.id?"sel":"")+'"><td class="num">'+fmtDT(a.t)+'</td><td>'+esc(org(a.org).name)+'</td><td class="num">'+diffs(a).length+'</td></tr>';}).join(""):'<tr><td colspan="3">承認待ちの申請はありません。「1 更新申請」から提出できます。</td></tr>';
+  var a=S.apps.filter(function(x){return x.id===S.selApp;})[0];
+  if(!a){el("apv-detail").innerHTML='<p class="note">一覧の行をクリックすると差分を表示します。</p>';}
+  else{var o=org(a.org);
+    el("apv-detail").innerHTML='<h3>差分：'+esc(o.name)+'</h3><div class="note">色付きの行が変更項目です（左：現在値／右：申請値）。</div><div class="tbl"><table class="diff"><thead><tr><th>項目</th><th>現在値（core）</th><th>申請値</th></tr></thead><tbody>'+
+    FIELDS.map(function(f){var c=same(o[f[0]],a.values[f[0]]);return'<tr class="'+(c?"same":"")+'"><td>'+f[1]+(c?"":' <span class="chip c-warn">変更</span>')+'</td><td class="wrap '+(c?"":"cur")+'">'+esc(show(o[f[0]]))+'</td><td class="wrap '+(c?"":"new")+'">'+esc(show(a.values[f[0]]))+'</td></tr>';}).join("")+
+    '</tbody></table></div><div class="row" style="margin-top:10px"><button class="btn" id="apv-ok" type="button">承認してcoreに反映</button><button class="btn danger" id="apv-ng" type="button">差戻し</button></div>'+
+    '<div id="apv-ngbox" class="hidden" style="margin-top:8px"><label for="apv-reason">差戻し理由（必須・団体に通知されます）</label><textarea id="apv-reason"></textarea><div class="row" style="margin-top:6px"><button class="btn danger" id="apv-ngok" type="button">差戻しを確定</button><span id="apv-ngmsg"></span></div></div>';}
+  el("apv-hist").innerHTML=S.history.slice().sort(function(a,b){return b.t-a.t;}).map(function(h){return'<tr><td class="num">'+fmtDT(h.t)+'</td><td>'+esc(org(h.org).name)+'</td><td>'+(h.result==="承認"?chip("更新済").replace("更新済","承認"):chip("差戻し"))+'</td><td>'+esc(h.user)+'</td><td class="wrap">'+esc(h.detail)+'</td></tr>';}).join("")||'<tr><td colspan="5">履歴はありません。</td></tr>';
+}
+el("apv-list").addEventListener("click",function(e){var tr=e.target.closest("tr[data-a]");if(tr){S.selApp=tr.dataset.a;renderApprove();}});
+el("apv-list").addEventListener("keydown",function(e){if(e.key==="Enter"){var tr=e.target.closest("tr[data-a]");if(tr){S.selApp=tr.dataset.a;renderApprove();}}});
+el("apv-detail").addEventListener("click",function(e){
+  var a=S.apps.filter(function(x){return x.id===S.selApp;})[0];if(!a)return;var o=org(a.org),user=el("apv-user").value;
+  if(e.target.id==="apv-ok"){var d=diffs(a);openConfirm({title:"承認の確認",body:o.name+"の申請を承認し、団体マスタ（core）に反映します。\n変更項目："+d.map(function(f){return f[1];}).join("、")+"\n承認者："+user,ok:"承認する",opener:"apv-ok",run:function(){FIELDS.forEach(function(f){o[f[0]]=f[0]==="themes"?sortThemes(a.values.themes):a.values[f[0]];});var t=Date.now();o.updatedAt=t;o.status="更新済";
+    S.history.push({t:t,org:o.id,result:"承認",user:user,detail:d.map(function(f){return f[1];}).join("、"),fields:d.map(function(f){return f[0];})});
+    S.formLoaded=null;S.apps=S.apps.filter(function(x){return x!==a;});S.selApp=null;log("承認",o.name+"の申請を承認しcoreに反映（"+user+"）");renderAll();}});}
+  if(e.target.id==="apv-ng"){el("apv-ngbox").classList.remove("hidden");el("apv-reason").focus();}
+  if(e.target.id==="apv-ngok"){var r=el("apv-reason").value.trim();if(!r){el("apv-ngmsg").innerHTML='<span class="msg e">理由を入力してください。</span>';return;}
+    o.status="差戻し";S.history.push({t:Date.now(),org:o.id,result:"差戻し",user:user,detail:"理由："+r});S.apps=S.apps.filter(function(x){return x!==a;});S.selApp=null;
+    log("差戻し",o.name+"へ差戻しを通知（理由："+r+"／"+user+"）");renderAll();}
+});
+
+// ---- 3 manage
+function renderManage(){var f=el("mg-filter").value;
+  var rows=S.orgs.filter(function(o){return!f||(f==="__old"?ageDays(o.updatedAt)>365:o.status===f);});
+  el("mg-count").textContent=rows.length+"件 / 全"+S.orgs.length+"件";
+  el("mg-list").innerHTML=rows.map(function(o){var old=ageDays(o.updatedAt)>365;var canReq=["未依頼","更新済","差戻し"].indexOf(o.status)>=0;var canRe=["依頼済・未回答","不達","再連絡済"].indexOf(o.status)>=0;
+    return'<tr><td>'+esc(o.name)+'</td><td>'+chip(o.status)+'</td><td class="num">'+fmtD(o.updatedAt)+(old?' <span class="old">情報が古い</span>':"")+'</td><td class="num">'+fmtD(o.requestAt)+'</td><td class="num">'+(o.requestAt?ageDays(o.requestAt)+"日":"-")+'</td><td><button class="btn sm" type="button" id="mg-req-'+o.id+'" data-req="'+o.id+'" '+(canReq?"":"disabled")+'>更新依頼を送る</button> <button class="btn sub sm" type="button" id="mg-re-'+o.id+'" data-re="'+o.id+'" '+(canRe?"":"disabled")+'>再連絡</button></td></tr>';}).join("")||'<tr><td colspan="6">該当なし</td></tr>';
+  el("mg-bounce-org").innerHTML=S.orgs.filter(function(o){return o.status==="依頼済・未回答"||o.status==="再連絡済";}).map(function(o){return'<option value="'+o.id+'">'+esc(o.name)+'</option>';}).join("");
+  el("mg-bounce").disabled=!el("mg-bounce-org").value;
+}
+el("mg-filter").addEventListener("change",renderManage);
+el("mg-list").addEventListener("click",function(e){var b=e.target.closest("button");if(!b)return;
+  if(b.dataset.req){var o=org(b.dataset.req);openConfirm({title:"更新依頼の確認",body:o.name+"へ登録情報の更新依頼を送ります（試作のため実際には送信しません）。\nステータスは「依頼済・未回答」になり、依頼日が今日になります。",ok:"更新依頼を送る",opener:b.id,run:function(){o.status="依頼済・未回答";o.requestAt=Date.now();log("依頼",o.name+"へ更新依頼を送信（試作のため実送信なし）");renderAll();}});}
+  if(b.dataset.re){var o2=org(b.dataset.re);openConfirm({title:"再連絡の確認",body:o2.name+"へ再度連絡します（試作のため実際には送信しません）。\nステータスは「再連絡済」になり、依頼日が今日になります。",ok:"再連絡する",opener:b.id,run:function(){o2.status="再連絡済";o2.requestAt=Date.now();log("再連絡",o2.name+"へ再連絡（試作のため実送信なし）");renderAll();}});}});
+el("mg-bounce").addEventListener("click",function(){var o=org(el("mg-bounce-org").value);if(!o)return;o.status="不達";log("不達",o.name+"宛の依頼メールが不達（宛先エラー）");renderAll();});
+
+// ---- 4 search
+function searchRows(){var th=el("sr-theme").value,rg=el("sr-region").value,b=Number(el("sr-budget").value)||0,s=Number(el("sr-self").value)||0,kw=el("sr-kw").value.trim(),c=el("sr-cert").checked;
+  return S.orgs.filter(function(o){if(th&&o.themes.indexOf(th)<0)return false;if(rg){if(rg[0]==="R"&&regionOf(o.pref)!==rg.slice(2))return false;if(rg[0]==="P"&&o.pref!==rg.slice(2))return false;}
+    if(o.budget<b||o.selfRatio<s)return false;if(c&&o.cert!=="認証済")return false;if(kw&&[o.name,o.keywords,o.target,o.pjName,o.pjSummary,o.themes.join("")].join(" ").indexOf(kw)<0)return false;return true;});}
+function renderSearch(){var rows=searchRows();el("sr-n").textContent=rows.length;el("sr-avg").textContent=rows.length?Math.round(rows.reduce(function(a,o){return a+o.budget;},0)/rows.length).toLocaleString():"-";
+  var cnt={};Object.keys(REGIONS).forEach(function(r){cnt[r]=0;});rows.forEach(function(o){cnt[regionOf(o.pref)]++;});var mx=Math.max.apply(null,Object.keys(cnt).map(function(k){return cnt[k];}).concat([1]));
+  el("sr-bars").innerHTML=Object.keys(cnt).map(function(r){return'<span>'+r+'</span><div><div class="b" style="width:'+(cnt[r]/mx*100)+'%"></div></div><span class="n">'+cnt[r]+'</span>';}).join("");
+  el("sr-list").innerHTML=rows.map(function(o){var old=ageDays(o.updatedAt)>365;return'<tr><td>'+esc(o.name)+'</td><td>'+certChip(o.cert)+'</td><td>'+esc(o.pref)+'</td><td class="wrap">'+esc(o.themes.join("、"))+'</td><td class="num">'+o.budget.toLocaleString()+'万円</td><td class="num">'+o.selfRatio+'%</td><td class="num">'+fmtD(o.updatedAt)+(old?' <span class="old">注意：1年以上更新なし</span>':"")+'</td></tr>';}).join("")||'<tr><td colspan="7">条件に合う団体はありません。</td></tr>';}
+function csvCell(v){v=String(v==null?"":v);return/[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;}
+function toCSV(head,rows){return[head].concat(rows).map(function(r){return r.map(csvCell).join(",");}).join("\n");}
+function copyText(text,ta,msgEl){ta.value=text;function fallback(){ta.classList.remove("hidden");ta.focus();ta.select();msgEl.innerHTML='<span class="msg e">自動コピーできませんでした。下の枠を選択済みです。Ctrl+C（⌘+C）でコピーしてください。</span>';}
+  try{if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(text).then(function(){ta.classList.remove("hidden");msgEl.innerHTML='<span class="msg">クリップボードにコピーしました。</span>';},fallback);}else fallback();}catch(e){fallback();}}
+el("sr-form").addEventListener("input",renderSearch);el("sr-form").addEventListener("change",renderSearch);el("sr-form").addEventListener("submit",function(e){e.preventDefault();});
+el("sr-copy").addEventListener("click",function(){var rows=searchRows().map(function(o){return[o.id,o.name,o.cert,o.legal,o.pref,regionOf(o.pref),o.themes.join("・"),o.budget,o.selfRatio,o.keywords,fmtD(o.updatedAt)];});
+  copyText(toCSV(["団体ID","団体名","認証状態","法人格","都道府県","地方","テーマ","年間予算(万円)","自己資金比率(%)","キーワード","最終更新日"],rows),el("sr-csv"),el("sr-copymsg"));log("抽出","検索結果"+rows.length+"件をCSVでコピー");});
+
+// ---- 5 giveone
+var PUBLIC=["name","pref","themes","pjName","pjSummary"];
+function approvedSince(o){return S.history.filter(function(h){return h.org===o.id&&h.result==="承認"&&h.t>S.lastSync;});}
+function hasPub(h){return (h.fields||[]).some(function(k){return PUBLIC.indexOf(k)>=0;});}
+function goRows(){return S.orgs.filter(function(o){return approvedSince(o).some(hasPub);});}
+function goExcluded(){return S.orgs.filter(function(o){var a=approvedSince(o);return a.length&&!a.some(hasPub);}).length;}
+function goCSV(){return toCSV(["団体名","所在地","テーマ","PJ名","PJ概要"],goRows().map(function(o){return[o.name,o.pref,o.themes.join("・"),o.pjName,o.pjSummary];}));}
+function renderDonationSite(){var rows=goRows();el("go-last").textContent="前回の反映日時："+fmtDT(S.lastSync)+"　／　今回の対象："+rows.length+"件"+"　／　非公開項目のみの変更は対象外（今回 "+goExcluded()+" 件）";
+  el("go-list").innerHTML=rows.map(function(o){return'<tr><td>'+esc(o.name)+'</td><td>'+esc(o.pref)+'</td><td class="wrap">'+esc(o.themes.join("、"))+'</td><td class="wrap">'+esc(o.pjName)+'</td><td class="wrap">'+esc(o.pjSummary)+'</td><td class="num">'+fmtDT(o.updatedAt)+'</td></tr>';}).join("")||'<tr><td colspan="6">前回反映以降に承認された変更はありません。</td></tr>';
+  el("go-csv").value=rows.length?goCSV():"";el("go-done").disabled=!rows.length;el("go-copy").disabled=!rows.length;}
+el("go-copy").addEventListener("click",function(){copyText(el("go-csv").value,el("go-csv"),el("go-msg"));});
+el("go-done").addEventListener("click",function(){var n=goRows().length;S.lastSync=Date.now();log("連携","寄付サイトへ反映済みとして記録（"+n+"件）");renderAll();el("go-msg").innerHTML='<span class="msg">反映日時を記録しました。</span>';});
+
+// ---- log
+function renderLog(){el("log").innerHTML=S.log.slice().sort(function(a,b){return b.t-a.t;}).map(function(l){var c={"申請":"c-vio","承認":"c-ok","差戻し":"c-err","不達":"c-err","依頼":"c-info","再連絡":"c-warn","連携":"c-gray","抽出":"c-gray","システム":"c-gray"}[l.k]||"c-gray";return'<li><time>'+fmtDT(l.t)+'</time><span class="chip k '+c+'">'+esc(l.k)+'</span>'+esc(l.m)+'</li>';}).join("");}
+
+function renderAll(){renderTabs();renderApplyOrgs();renderApprove();renderManage();renderSearch();renderDonationSite();renderLog();}
+
+// ---- 共通確認ダイアログ
+var DLG={run:null,opener:null};
+function openConfirm(opt){DLG.run=opt.run;DLG.opener=opt.opener;el("dlg-title").textContent=opt.title;el("dlg-body").textContent=opt.body;el("dlg-ok").textContent=opt.ok;el("dlg").classList.remove("hidden");el("dlg-ok").focus();}
+function closeConfirm(){el("dlg").classList.add("hidden");var id=DLG.opener;DLG.run=null;DLG.opener=null;var b=id&&el(id);if(b&&!b.disabled)b.focus();}
+el("dlg-ok").addEventListener("click",function(){var r=DLG.run,id=DLG.opener;el("dlg").classList.add("hidden");DLG.run=null;if(r)r();var b=id&&el(id);if(b&&!b.disabled)b.focus();DLG.opener=null;});
+el("dlg-cancel").addEventListener("click",closeConfirm);
+el("dlg").addEventListener("click",function(e){if(e.target.id==="dlg")closeConfirm();});
+document.addEventListener("keydown",function(e){if(e.key==="Escape"&&!el("dlg").classList.contains("hidden"))closeConfirm();if(e.key==="Tab"&&!el("dlg").classList.contains("hidden")){var f=[el("dlg-cancel"),el("dlg-ok")];if(f.indexOf(document.activeElement)<0){e.preventDefault();el("dlg-ok").focus();}else if(!e.shiftKey&&document.activeElement===f[1]){e.preventDefault();f[0].focus();}else if(e.shiftKey&&document.activeElement===f[0]){e.preventDefault();f[1].focus();}}});
+
+// ---- header
+el("resetBtn").addEventListener("click",function(){el("resetConfirm").classList.remove("hidden");el("resetYes").focus();});
+el("resetNo").addEventListener("click",function(){el("resetConfirm").classList.add("hidden");});
+el("resetYes").addEventListener("click",function(){var tab=S.tab;initState();S.tab=tab;el("resetConfirm").classList.add("hidden");log("システム","初期データに戻しました");renderAll();});
+el("themeSel").addEventListener("change",function(){var v=this.value;if(v)document.documentElement.setAttribute("data-theme",v);else document.documentElement.removeAttribute("data-theme");});
+
+fillSelects();initState();renderAll();
+})();
+</script>
+
+</body>
+</html>
