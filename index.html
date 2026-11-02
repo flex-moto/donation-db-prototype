@@ -12,6 +12,7 @@
   --ok-bg:#dcefe2;--ok-fg:#1d5c32;--warn-bg:#fbecc8;--warn-fg:#7a5300;--err-bg:#f8dcdc;--err-fg:#8a1f1f;
   --info-bg:#dde8f6;--info-fg:#1d4775;--gray-bg:#e6e8e6;--gray-fg:#4b544f;--vio-bg:#e9e2f2;--vio-fg:#4f3a73;
   --del-bg:#fbe3e3;--add-bg:#ddf2e2;--bar:#3f8f7a;--overlay:rgba(20,28,24,.5);
+  --r-sm:4px;--r-md:8px;
   color-scheme:light;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
@@ -30,72 +31,76 @@
 html,body{margin:0}
 body{background:var(--bg);color:var(--text);font-family:"Noto Sans JP","Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,sans-serif;font-size:14px;line-height:1.6}
 .page{max-width:1280px;margin:0 auto;padding-block:12px 32px;padding-left:max(16px, env(safe-area-inset-left,0px));padding-right:max(16px, env(safe-area-inset-right,0px))}
-header{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;justify-content:space-between;border-bottom:2px solid var(--accent);padding-bottom:8px;margin-bottom:8px}
-h1{font-size:18px;margin:0}
-.badge-proto{background:var(--warn-bg);color:var(--warn-fg);font-size:12px;padding:2px 8px;border-radius:3px;font-weight:700}
-nav{display:flex;flex-wrap:wrap;gap:4px;margin:8px 0 12px}
-nav button{background:var(--surface);border:1px solid var(--border);color:var(--text);padding:6px 12px;border-radius:4px;cursor:pointer;font:inherit}
-nav button[aria-selected="true"]{background:var(--accent);color:var(--accent-text);border-color:var(--accent);font-weight:700}
+header{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);padding-bottom:8px;margin-bottom:8px}
+h1{font-size:18px;font-weight:600;margin:0}
+.badge-proto{background:var(--warn-bg);color:var(--warn-fg);font-size:12px;padding:0 8px;border-radius:var(--r-sm);font-weight:600}
+nav{display:flex;flex-wrap:wrap;gap:4px;margin:8px 0 16px;padding:4px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-md);max-width:100%}
+nav button{display:inline-flex;align-items:center;justify-content:center;min-height:32px;background:transparent;border:1px solid transparent;color:var(--muted);padding:4px 12px;border-radius:var(--r-sm);cursor:pointer;font:inherit}
+nav button[aria-selected="true"]{background:var(--surface);color:var(--text);border-color:var(--border);font-weight:600}
 .layout{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:16px;align-items:start}
 @media (max-width:900px){.layout{grid-template-columns:minmax(0,1fr)}}
-section.panel{background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:14px}
-h2{font-size:16px;margin:0 0 4px}
-h3{font-size:14px;margin:14px 0 6px}
-.where{display:inline-block;font-size:12px;padding:1px 8px;border-radius:3px;margin:0 6px 6px 0;border:1px solid}
-.where.in{background:var(--accent-soft);color:var(--accent);border-color:var(--accent)}
-.where.out{background:var(--err-bg);color:var(--err-fg);border-color:var(--err-fg)}
-.note{font-size:12px;color:var(--muted);background:var(--surface2);border-left:3px solid var(--border);padding:6px 10px;margin:8px 0}
-.note.warn{border-left-color:var(--warn-fg)}
-label{display:block;font-size:12px;color:var(--muted);margin-bottom:2px}
-input[type=text],input[type=number],input[type=email],select,textarea{width:100%;font:inherit;color:var(--text);background:var(--surface);border:1px solid var(--border);border-radius:3px;padding:6px 8px}
+section.panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-md);padding:16px}
+h2{font-size:16px;font-weight:600;margin:0 0 8px}
+h3{font-size:14px;font-weight:600;margin:12px 0 8px}
+.where{display:inline-block;font-size:12px;padding:0 8px;border-radius:var(--r-sm);margin:0 8px 8px 0}
+.where.in{background:var(--gray-bg);color:var(--gray-fg)}
+.where.out{background:var(--warn-bg);color:var(--warn-fg)}
+.note{font-size:12px;color:var(--muted);background:var(--surface2);border-radius:var(--r-sm);padding:8px 12px;margin:12px 0}
+.note.warn{background:var(--warn-bg);color:var(--warn-fg)}
+.hint{font-size:12px;color:var(--muted);margin:0}
+p.hint{margin:0 0 8px}
+label{display:block;font-size:12px;color:var(--muted);margin-bottom:4px}
+input[type=text],input[type=number],input[type=email],select,textarea{width:100%;min-height:32px;font:inherit;color:var(--text);background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);padding:4px 8px}
 textarea{min-height:60px}
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px 14px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px 16px}
 .full{grid-column:1/-1}
-button.btn{font:inherit;padding:6px 14px;border-radius:3px;border:1px solid var(--accent);background:var(--accent);color:var(--accent-text);cursor:pointer}
+button.btn{display:inline-flex;align-items:center;justify-content:center;min-height:32px;font:inherit;padding:4px 16px;border-radius:var(--r-sm);border:1px solid var(--accent);background:var(--accent);color:var(--accent-text);cursor:pointer}
 button.btn.sub{background:var(--surface);color:var(--accent)}
 button.btn.danger{background:var(--surface);color:var(--err-fg);border-color:var(--err-fg)}
-button.btn.sm{padding:2px 8px;font-size:12px}
+button.btn.sm{min-height:28px;padding:0 8px;font-size:12px}
 button:disabled{opacity:.45;cursor:not-allowed}
 :focus-visible{outline:2px solid var(--focus);outline-offset:2px}
-.tags{display:flex;flex-wrap:wrap;gap:6px}
-.tags label{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--border);padding:2px 8px;border-radius:12px;color:var(--text);font-size:13px;margin:0;cursor:pointer;background:var(--surface)}
+.tags{display:flex;flex-wrap:wrap;gap:8px}
+.tags label{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--border);padding:0 8px;min-height:28px;border-radius:999px;color:var(--text);font-size:13px;margin:0;cursor:pointer;background:var(--surface)}
 .tags label:has(input:checked){background:var(--accent-soft);border-color:var(--accent)}
-.tbl{overflow-x:auto;border:1px solid var(--border);border-radius:3px}
+.tbl{overflow-x:auto;border:1px solid var(--border);border-radius:var(--r-md)}
 table{border-collapse:collapse;width:100%;font-size:13px}
-th,td{padding:6px 8px;line-height:1.5;border-bottom:1px solid var(--border);text-align:left;vertical-align:top;white-space:nowrap}
+th,td{padding:4px 8px;line-height:1.5;border-bottom:1px solid var(--border);text-align:left;vertical-align:top;white-space:nowrap}
 td.wrap{white-space:normal;min-width:160px}
 th{background:var(--surface2);font-weight:500;color:var(--muted);position:sticky;top:0}
 .num{text-align:right;font-variant-numeric:tabular-nums}
-.chip{display:inline-block;font-size:12px;padding:0 8px;border-radius:10px;white-space:nowrap}
+.chip{display:inline-block;font-size:12px;padding:0 8px;border-radius:999px;white-space:nowrap}
+.chip::before{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;background:currentColor;margin-right:4px;vertical-align:middle}
 .c-gray{background:var(--gray-bg);color:var(--gray-fg)}.c-info{background:var(--info-bg);color:var(--info-fg)}
 .c-warn{background:var(--warn-bg);color:var(--warn-fg)}.c-err{background:var(--err-bg);color:var(--err-fg)}
 .c-ok{background:var(--ok-bg);color:var(--ok-fg)}.c-vio{background:var(--vio-bg);color:var(--vio-fg)}
-.old{color:var(--err-fg);font-size:12px;font-weight:700}
+.old{color:var(--err-fg);font-size:12px;font-weight:600}
 .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 table td,table th{vertical-align:top}
-.diff td.cur{background:var(--del-bg)}.diff td.new{background:var(--add-bg);font-weight:700}
+.diff td.cur{background:var(--del-bg)}.diff td.new{background:var(--add-bg);font-weight:600}
 .diff tr.same td{color:var(--muted)}
-.stats{display:flex;flex-wrap:wrap;gap:10px;margin:8px 0}
-.stat{border:1px solid var(--border);padding:6px 12px;border-radius:3px;min-width:130px}
-.stat b{display:block;font-size:20px;font-variant-numeric:tabular-nums}
-.bars{display:grid;grid-template-columns:70px 1fr 32px;gap:4px 8px;align-items:center;font-size:12px;max-width:520px}
-.bars .b{height:14px;background:var(--bar);border-radius:2px}
+.stats{display:flex;flex-wrap:wrap;gap:12px;margin:12px 0}
+.stat{border:1px solid var(--border);background:var(--surface);padding:8px 12px;border-radius:var(--r-md);min-width:130px;font-size:12px;color:var(--muted)}
+.stat b{display:block;font-size:20px;font-weight:600;color:var(--text);font-variant-numeric:tabular-nums}
+.bars{display:grid;grid-template-columns:72px 1fr 32px;gap:4px 8px;align-items:center;font-size:12px;max-width:520px}
+.bars .b{height:12px;background:var(--bar);border-radius:var(--r-sm)}
 .bars .n{font-variant-numeric:tabular-nums;text-align:right}
 aside{position:sticky;top:8px}
+aside.panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-md);padding:12px}
 #log{list-style:none;margin:0;padding:0;max-height:70vh;overflow-y:auto;font-size:12px}
-#log li{border-bottom:1px solid var(--border);padding:5px 0}
-#log time{color:var(--muted);font-variant-numeric:tabular-nums;margin-right:6px}
-#log .k{font-size:11px;margin-right:4px}
+#log li{border-bottom:1px solid var(--border);padding:4px 0}
+#log time{color:var(--muted);font-variant-numeric:tabular-nums;margin-right:8px}
+#log .k{font-size:12px;margin-right:4px}
 .hidden{display:none}
-.msg{font-size:13px;color:var(--ok-fg);background:var(--ok-bg);padding:4px 10px;border-radius:3px;margin:6px 0}
+.msg{font-size:13px;color:var(--ok-fg);background:var(--ok-bg);padding:4px 12px;border-radius:var(--r-sm);margin:8px 0}
 .msg.e{color:var(--err-fg);background:var(--err-bg)}
 .list-click tr{cursor:pointer}.list-click tr:hover td{background:var(--surface2)}
 tr.sel td{background:var(--accent-soft)}
 .dlg-back{position:fixed;inset:0;background:var(--overlay);display:flex;align-items:center;justify-content:center;padding:16px;z-index:50}
 .dlg-back.hidden{display:none}
-.dlg{background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:4px;padding:16px;width:min(460px,100%);max-height:90vh;overflow-y:auto}
-#dlg-body{white-space:pre-wrap;margin:8px 0 14px}
-.drop{border:2px dashed var(--border);border-radius:4px;padding:16px;text-align:center;background:var(--surface2);margin:8px 0}
+.dlg{background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:var(--r-md);padding:16px;width:min(460px,100%);max-height:90vh;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,.2)}
+#dlg-body{white-space:pre-wrap;margin:8px 0 16px}
+.drop{border:2px dashed var(--border);border-radius:var(--r-md);padding:16px;text-align:center;background:var(--surface2);margin:12px 0}
 .drop.over{border-color:var(--accent);background:var(--accent-soft)}
 .drop input[type=file]{max-width:100%;font:inherit;color:var(--text)}
 .cols{font-size:12px;color:var(--muted);word-break:break-all}
@@ -113,7 +118,7 @@ tr.sel td{background:var(--accent-soft)}
     <button class="btn danger sm" id="resetBtn" type="button">初期データに戻す</button>
   </div>
 </header>
-<p class="note">このページは検討用の試作版です。団体名・数値・メールアドレスはすべて架空です。</p>
+<p class="hint">このページは検討用の試作版です。団体名・数値・メールアドレスはすべて架空です。</p>
 <div id="resetConfirm" class="note warn hidden">操作内容をすべて消して初期データに戻します。よろしいですか？
   <button class="btn danger sm" id="resetYes" type="button">戻す</button> <button class="btn sub sm" id="resetNo" type="button">やめる</button></div>
 
@@ -126,7 +131,7 @@ tr.sel td{background:var(--accent-soft)}
   <span class="where out">要件（既存値入りフォーム）・概念図では「Googleフォーム取込み」</span><span class="where in">概念図：raw層への取込み</span>
   <h2>1. 団体の更新申請（団体側の画面）</h2>
   <div class="note">Googleフォームでは既存の登録値を入れた状態での修正が難しい点を想定した画面です。団体を選ぶと現在の登録内容が入った状態で開きます。</div>
-  <div class="grid" style="margin-bottom:10px"><div><label for="ap-org">申請する団体</label><select id="ap-org"></select></div></div>
+  <div class="grid" style="margin-bottom:12px"><div><label for="ap-org">申請する団体</label><select id="ap-org"></select></div></div>
   <form id="ap-form">
     <div class="grid">
       <div class="full"><label for="ap-name">団体名</label><input type="text" id="ap-name" required></div>
@@ -141,7 +146,7 @@ tr.sel td{background:var(--accent-soft)}
       <div class="full"><label for="ap-pj">寄付プロジェクト名</label><input type="text" id="ap-pj"></div>
       <div class="full"><label for="ap-pjsum">寄付プロジェクト概要</label><textarea id="ap-pjsum"></textarea></div>
     </div>
-    <div class="row" style="margin-top:12px"><button class="btn" type="submit" id="ap-submit">提出する</button><span class="note" style="margin:0">提出すると「承認待ち」になり、財団に通知されます（試作のため実際の通知は送りません）。</span></div>
+    <div class="row" style="margin-top:12px"><button class="btn" type="submit" id="ap-submit">提出する</button><span class="hint">提出すると「承認待ち」になり、財団に通知されます（試作のため実際の通知は送りません）。</span></div>
     <div id="ap-msg"></div>
   </form>
 </section>
@@ -164,7 +169,7 @@ tr.sel td{background:var(--accent-soft)}
   <span class="where out">要件U03・概念図に記載なし</span>
   <h2>3. 更新管理（更新依頼・未回答・不達・再連絡）</h2>
   <div class="note">「更新依頼を送る」「再連絡」は状態と日付を変えるだけで、実際のメール送信は行いません。最終更新から365日を超えた団体には「情報が古い」と表示します。</div>
-  <div class="row" style="margin-bottom:8px"><label for="mg-filter" style="margin:0">ステータス絞込み</label><select id="mg-filter" style="width:auto"></select><span id="mg-count" class="note" style="margin:0"></span></div>
+  <div class="row" style="margin-bottom:8px"><label for="mg-filter" style="margin:0">ステータス絞込み</label><select id="mg-filter" style="width:auto"></select><span id="mg-count" class="hint"></span></div>
   <div class="tbl"><table><thead><tr><th>団体名</th><th>ステータス</th><th>最終更新日</th><th>依頼日</th><th class="num">依頼からの経過日数</th><th>操作</th></tr></thead><tbody id="mg-list"></tbody></table></div>
   <div class="row" style="margin-top:8px"><label for="mg-bounce-org" style="margin:0">不達のテスト（模擬）：</label><select id="mg-bounce-org" style="width:auto;max-width:260px"></select><button class="btn sub sm" id="mg-bounce" type="button">不達として記録</button></div>
 </section>
@@ -179,7 +184,7 @@ tr.sel td{background:var(--accent-soft)}
     <div><label for="sr-budget">年間予算 下限（万円）</label><input type="number" id="sr-budget" min="0"></div>
     <div><label for="sr-self">自己資金比率 下限（%）</label><input type="number" id="sr-self" min="0" max="100"></div>
     <div><label for="sr-kw">キーワード</label><input type="text" id="sr-kw" placeholder="例：子ども"></div>
-    <div style="align-self:end"><label style="display:flex;gap:6px;align-items:center;color:var(--text);font-size:14px"><input type="checkbox" id="sr-cert">認証済のみ</label></div>
+    <div style="align-self:end"><label style="display:flex;gap:8px;align-items:center;color:var(--text);font-size:14px"><input type="checkbox" id="sr-cert">認証済のみ</label></div>
   </form>
   <div class="stats"><div class="stat">該当件数<b id="sr-n">0</b></div><div class="stat">平均年間予算（万円）<b id="sr-avg">-</b></div></div>
   <h3>地方別件数</h3><div class="bars" id="sr-bars"></div>
@@ -216,9 +221,9 @@ tr.sel td{background:var(--accent-soft)}
 </section>
 </main>
 
-<aside class="panel" style="background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:12px">
+<aside class="panel">
   <h2>通知・操作ログ</h2>
-  <div class="note" style="margin-top:4px">最新順。試作のため実際の通知・メールは送られません。</div>
+  <div class="note" style="margin-top:8px">最新順。試作のため実際の通知・メールは送られません。</div>
   <ul id="log"></ul>
 </aside>
 </div>
@@ -346,8 +351,8 @@ function renderApprove(){
   else{var o=a.isNew?null:org(a.org);
     el("apv-detail").innerHTML='<h3>'+(a.isNew?'新規登録：':'差分：')+esc(appName(a))+'</h3><div class="note">'+(a.isNew?'新規登録の申請です。承認すると団体マスタ（core）に新しい団体として追加されます（認証状態は「審査中」）。':'色付きの行が変更項目です（左：現在値／右：申請値）。')+'申請者：'+esc(a.src||"団体フォーム")+'</div><div class="tbl"><table class="diff"><thead><tr><th>項目</th><th>現在値（core）</th><th>申請値</th></tr></thead><tbody>'+
     FIELDS.map(function(f){var c=a.isNew?false:same(o[f[0]],a.values[f[0]]);return'<tr class="'+(c?"same":"")+'"><td>'+f[1]+(c?"":' <span class="chip c-warn">'+(a.isNew?"新規":"変更")+'</span>')+'</td><td class="wrap '+(c?"":"cur")+'">'+(a.isNew?"（新規）":esc(show(o[f[0]])))+'</td><td class="wrap '+(c?"":"new")+'">'+esc(show(a.values[f[0]]))+'</td></tr>';}).join("")+
-    '</tbody></table></div><div class="row" style="margin-top:10px"><button class="btn" id="apv-ok" type="button">'+(a.isNew?"承認して団体マスタに追加":"承認してcoreに反映")+'</button><button class="btn danger" id="apv-ng" type="button">差戻し</button></div>'+
-    '<div id="apv-ngbox" class="hidden" style="margin-top:8px"><label for="apv-reason">差戻し理由（必須・団体に通知されます）</label><textarea id="apv-reason"></textarea><div class="row" style="margin-top:6px"><button class="btn danger" id="apv-ngok" type="button">差戻しを確定</button><span id="apv-ngmsg"></span></div></div>';}
+    '</tbody></table></div><div class="row" style="margin-top:12px"><button class="btn" id="apv-ok" type="button">'+(a.isNew?"承認して団体マスタに追加":"承認してcoreに反映")+'</button><button class="btn danger" id="apv-ng" type="button">差戻し</button></div>'+
+    '<div id="apv-ngbox" class="hidden" style="margin-top:8px"><label for="apv-reason">差戻し理由（必須・団体に通知されます）</label><textarea id="apv-reason"></textarea><div class="row" style="margin-top:8px"><button class="btn danger" id="apv-ngok" type="button">差戻しを確定</button><span id="apv-ngmsg"></span></div></div>';}
   el("apv-hist").innerHTML=S.history.slice().sort(function(a,b){return b.t-a.t;}).map(function(h){var nm=h.name||(org(h.org)?org(h.org).name:"");return'<tr><td class="num">'+fmtDT(h.t)+'</td><td>'+esc(nm)+'</td><td>'+(h.result==="承認"?'<span class="chip c-ok">承認</span>':chip("差戻し"))+'</td><td>'+esc(h.user)+'</td><td class="wrap">'+esc(h.detail)+'</td></tr>';}).join("")||'<tr><td colspan="5">履歴はありません。</td></tr>';
 }
 function nextOrgId(){var m=0;S.orgs.forEach(function(o){var n=parseInt(o.id.slice(1),10);if(n>m)m=n;});return"G"+p2(m+1);}
@@ -373,7 +378,7 @@ function renderManage(){var f=el("mg-filter").value;
   var rows=S.orgs.filter(function(o){return!f||(f==="__old"?ageDays(o.updatedAt)>365:o.status===f);});
   el("mg-count").textContent=rows.length+"件 / 全"+S.orgs.length+"件";
   el("mg-list").innerHTML=rows.map(function(o){var old=ageDays(o.updatedAt)>365;var canReq=["未依頼","更新済","差戻し"].indexOf(o.status)>=0;var canRe=["依頼済・未回答","不達","再連絡済"].indexOf(o.status)>=0;
-    return'<tr><td>'+esc(o.name)+'</td><td>'+chip(o.status)+'</td><td class="num">'+fmtD(o.updatedAt)+(old?' <span class="old">情報が古い</span>':"")+'</td><td class="num">'+fmtD(o.requestAt)+'</td><td class="num">'+(o.requestAt?ageDays(o.requestAt)+"日":"-")+'</td><td><button class="btn sm" type="button" id="mg-req-'+o.id+'" data-req="'+o.id+'" '+(canReq?"":"disabled")+'>更新依頼を送る</button> <button class="btn sub sm" type="button" id="mg-re-'+o.id+'" data-re="'+o.id+'" '+(canRe?"":"disabled")+'>再連絡</button></td></tr>';}).join("")||'<tr><td colspan="6">該当なし</td></tr>';
+    return'<tr><td>'+esc(o.name)+'</td><td>'+chip(o.status)+'</td><td class="num">'+fmtD(o.updatedAt)+(old?' <span class="old">情報が古い</span>':"")+'</td><td class="num">'+fmtD(o.requestAt)+'</td><td class="num">'+(o.requestAt?ageDays(o.requestAt)+"日":"-")+'</td><td><button class="btn sub sm" type="button" id="mg-req-'+o.id+'" data-req="'+o.id+'" '+(canReq?"":"disabled")+'>更新依頼を送る</button> <button class="btn sub sm" type="button" id="mg-re-'+o.id+'" data-re="'+o.id+'" '+(canRe?"":"disabled")+'>再連絡</button></td></tr>';}).join("")||'<tr><td colspan="6">該当なし</td></tr>';
   el("mg-bounce-org").innerHTML=S.orgs.filter(function(o){return o.status==="依頼済・未回答"||o.status==="再連絡済";}).map(function(o){return'<option value="'+o.id+'">'+esc(o.name)+'</option>';}).join("");
   el("mg-bounce").disabled=!el("mg-bounce-org").value;
 }
@@ -508,7 +513,7 @@ function renderBulk(){var B=S.bulk,box=el("bk-result");if(!B){box.innerHTML="";r
       sel='<select id="bk-ch-'+i+'" data-i="'+i+'" aria-label="'+r.line+'行目の扱い" style="min-width:180px">'+opts+'</select>';}
     else sel=r.st==="OK"?"対象":"対象外";
     return'<tr><td class="num">'+r.line+'</td><td>'+stChip(r.st)+'</td><td>'+esc(r.kind)+'</td><td class="wrap">'+esc(r.p.name||"（なし）")+'</td><td>'+esc(r.vals.pref||r.p.pref||"")+'</td><td class="wrap">'+esc(r.errs.concat(r.warns).join("／")||"-")+'</td><td>'+sel+'</td></tr>';}).join("")+'</tbody></table></div>';
-  h+='<div class="row" style="margin-top:10px"><button class="btn sub" type="button" id="bk-imp-ok" '+(pOk.length?"":"disabled")+'>OKのみ取り込む（'+pOk.length+'件）</button><button class="btn" type="button" id="bk-imp-all" '+(pAll.length?"":"disabled")+'>OKと要確認（選択済み）を取り込む（'+pAll.length+'件）</button></div>';
+  h+='<div class="row" style="margin-top:12px"><button class="btn sub" type="button" id="bk-imp-ok" '+(pOk.length?"":"disabled")+'>OKのみ取り込む（'+pOk.length+'件）</button><button class="btn" type="button" id="bk-imp-all" '+(pAll.length?"":"disabled")+'>OKと要確認（選択済み）を取り込む（'+pAll.length+'件）</button></div>';
   box.innerHTML=h;}
 function bulkImport(all,opener){var P=plan(all);if(!P.length)return;var a=P.filter(function(x){return x.isNew;}).length,b=P.length-a,B=S.bulk;
   openConfirm({title:"一括登録の確認",body:P.length+"件を承認待ちに追加します（新規 "+a+"／更新 "+b+"）。\n団体マスタには承認後に反映されます。\nファイル："+B.fname,ok:"承認待ちに追加する",opener:opener,run:function(){
